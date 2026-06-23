@@ -1352,4 +1352,13 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.egress.sovereign_guard",
     severity: "block",
   },
+  {
+    id: "claim.honesty_ledger.signed_verifiable",
+    source: "v3.143.0 release notes — PUBLIC HONESTY LEDGER",
+    text: "Mneme emits a PUBLIC HONESTY LEDGER — a signed (Ed25519), offline-verifiable record of every public claim + its probe + last-measured verdict. Anyone verifies it with the embedded key alone: the signature, the inline payload hash, AND that the summary RE-DERIVES from the claim rows (a cooked summary is rejected). The Truth-Gate badge is green ONLY when drift+refuted=0 and embeds the real numbers — it cannot be faked green. honestyLedgerGauntlet=100. HONEST: attests every public CLAIM passes its probe, NOT that the software is bug-free",
+    kind: "boolean",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.honesty_ledger.signed_verifiable",
+    severity: "block",
+  },
 ];

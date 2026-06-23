@@ -14,8 +14,10 @@
 <a href="https://github.com/marketplace/actions/mneme-pr-context-checks" target="_blank" rel="noopener"><img alt="GitHub Marketplace" src="https://img.shields.io/badge/Marketplace-PR%20Action-2da44e?style=for-the-badge&logo=github" /></a>
 <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener"><img alt="MCP tools" src="https://img.shields.io/badge/MCP%20tools-900%2B-c084fc?style=for-the-badge" /></a>
 <a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><img alt="GAUNTLET" src="https://img.shields.io/badge/PEAK%20GAUNTLET-100%2F100-2da44e?style=for-the-badge" /></a>
-<a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><img alt="TRUTH GATE" src="https://img.shields.io/badge/TRUTH%20GATE-100%2F100-2da44e?style=for-the-badge" /></a>
+<a href="docs/HONESTY-LEDGER.md" target="_blank" rel="noopener"><img alt="TRUTH GATE" src="https://img.shields.io/badge/TRUTH%20GATE-zero--drift%20%C2%B7%20signed-2da44e?style=for-the-badge" /></a>
 <a href="LICENSE" target="_blank" rel="noopener"><img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" /></a>
+
+<br/><sub>🛡 <b>The world's only machine-verified marketing.</b> Every public claim binds to a probe; CI fails the build if even one drifts. The <a href="docs/HONESTY-LEDGER.md" target="_blank" rel="noopener"><b>Public Honesty Ledger</b></a> is Ed25519-signed and verifies <b>offline</b> (<code>mneme truthproof verify</code>) — the badge above <b>cannot be faked green.</b></sub>
 
 <br/><sub><b>New here?</b> → <b><a href="docs/GETTING-STARTED.md" target="_blank" rel="noopener">60-second start</a></b> · <b>try it free</b> → <b><a href="https://xray.mneme-ai.space" target="_blank" rel="noopener">xray.mneme-ai.space</a></b> (paste any public repo) · don't read the 900-tool list — your agent searches it for you.</sub>
 

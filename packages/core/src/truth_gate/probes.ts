@@ -3796,6 +3796,21 @@ const probes: Probe[] = [
       }
     },
   },
+  // ── v3.143.0 — PUBLIC HONESTY LEDGER (self-referential, deterministic) ──
+  {
+    id: "probe.honesty_ledger.signed_verifiable",
+    kind: "boolean",
+    description: "1 when the public honesty ledger machinery is sound: a clean ledger signs + verifies offline as honest, a tampered payload is rejected, a cooked summary is rejected, and the badge cannot be faked green while drifting. Pure logic (no .mneme, no network).",
+    run: async () => {
+      try {
+        const { honestyLedgerGauntlet } = await import("../honesty_ledger/index.js" as string) as typeof import("../honesty_ledger/index.js");
+        const g = honestyLedgerGauntlet();
+        return { value: g.score === 100 ? 1 : 0, evidence: g.score === 100 ? "ledger signs+verifies, tamper+cook rejected, badge can't fake green" : `honesty-ledger gauntlet ${g.score}`, detail: g as unknown as Record<string, unknown> };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
 ];
 
 export const ALL_PROBES: ReadonlyArray<Probe> = probes;

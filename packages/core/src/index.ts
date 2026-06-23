@@ -978,6 +978,7 @@ export * as pulse from "./pulse.js";
 export * as notifier from "./notifier/index.js";
 export * as immune from "./immune/index.js";
 export * as notary from "./notary/index.js";
+export * as honestyLedger from "./honesty_ledger/index.js";
 export * as flightRecorder from "./flight_recorder/index.js";
 export * as honestyScore from "./honesty_score/index.js";
 export * as truthStake from "./truth_stake/index.js";

