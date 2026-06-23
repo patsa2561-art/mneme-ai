@@ -2,13 +2,13 @@
   "v": 1,
   "alg": "ed25519",
   "kind": "generic",
-  "subject": "mneme-honesty-ledger@3.150.0",
-  "payloadHash": "47f098f5740cca47b91e68b5c1402956d6264679b0ea332bc6885354778fd768",
+  "subject": "mneme-honesty-ledger@3.151.0",
+  "payloadHash": "be77f4f2b8610bae14fea037aa74131da11c78d9980e2bc6bf934ce2a580c874",
   "payload": {
     "spec": "MNEME-HONESTY-LEDGER",
     "v": 1,
-    "version": "3.150.0",
-    "generatedAt": "2026-06-23T09:59:06.496Z",
+    "version": "3.151.0",
+    "generatedAt": "2026-06-23T10:23:52.865Z",
     "summary": {
       "total": 138,
       "pass": 138,
@@ -288,7 +288,7 @@
         "probeId": "probe.capabilities.bytes",
         "severity": "block",
         "verdict": "pass",
-        "reason": "asserted < 25000 bytes; measured 4134"
+        "reason": "asserted < 25000 bytes; measured 3980"
       },
       {
         "id": "claim.tokens.capabilities_tokens_lt_8k",
@@ -360,7 +360,7 @@
         "probeId": "probe.stderr.session_bytes",
         "severity": "warn",
         "verdict": "pass",
-        "reason": "asserted >= 200 bytes; measured 523"
+        "reason": "asserted >= 200 bytes; measured 522"
       },
       {
         "id": "claim.tool_count.at_least_800",
@@ -1266,8 +1266,8 @@
   },
   "issuer": "MCowBQYDK2VwAyEAE8LE7MxyTrZatGLYHP0O4Kj4OoOzKHsRmLJBScBuPmM=",
   "issuerFingerprint": "9de66ee802256bee",
-  "issuedAt": 1782208753700,
+  "issuedAt": 1782210240126,
   "prev": null,
-  "receiptId": "a33cfb6b9b5a05a6ced24d8ee6156d50850c36749324b45552fe0b88150897c1",
-  "sig": "/2hFyVSNe+3VbODZ7fBIjPKdTjsNPTOJcmiBKKOE4c/5AP9+thkABn2LteD0yDRZA2se2Kuvv08NC8L1J9xVDA=="
+  "receiptId": "509d1252e96710b3be018bf0ed8957477196c2d7acecad4abea452e8dcf1ad18",
+  "sig": "SMJCgrCs8S8G5FZRf9dD3kUVlAtExHvcbq9D82edBCVPLOC2xJYIa0nLnwDF1Zv6A261R02brFLv16x3yAY0DQ=="
 }

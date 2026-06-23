@@ -727,7 +727,7 @@ function seanceLandingHtml(): string {
 // ─── 🧭 REPO BRIEF — the Context Capsule (Path-A moat) ───────────────────────
 function parseBriefCommits(repoPath: string, max = 1500): repoBrief.BriefCommit[] {
   const US = "\x1f", RS = "\x1e";
-  const g = (args: string[]) => { const r = gitSpawn("git", ["-C", repoPath, ...args], { encoding: "utf8", timeout: 60000, maxBuffer: 128 * 1024 * 1024 }); return r.status === 0 ? (r.stdout || "") : ""; };
+  const g = (args: string[]) => { const r = gitSpawn("git", ["-C", repoPath, ...args], { encoding: "utf8", timeout: 18000, maxBuffer: 128 * 1024 * 1024 }); return r.status === 0 ? (r.stdout || "") : ""; };
   const meta = g(["log", "--no-merges", "-n", String(max), `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`]);
   const byHash = new Map<string, repoBrief.BriefCommit>();
   for (const blk of meta.split(RS)) { if (!blk.trim()) continue; const [h, a, t, s, ...r] = blk.split(US); if (!h) continue; byHash.set(h.trim(), { hash: h.trim(), author: (a || "").trim(), ts: parseInt(t || "0", 10) || 0, subject: (s || "").trim(), body: (r.join(US) || "").trim(), files: [], churn: 0 }); }
@@ -973,12 +973,14 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       let handle: { path: string; dispose: () => void } | null = null;
       try {
         handle = shallowClone(gitUrl);
-        const commits = parseBriefCommits(handle.path, 5000);
+        const commits = parseBriefCommits(handle.path, 1500);
         if (!commits.length) return send(res, 502, { error: "no commit history found" });
         const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8", timeout: 60000 }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
         const repoCommits = parseInt(g(["rev-list", "--count", "HEAD"]), 10) || commits.length;
-        const grep = g(["grep", "-nI", "-E", "TODO|FIXME|HACK|XXX", "HEAD", "--", "*.ts", "*.tsx", "*.js", "*.py", "*.go", "*.rs"]);
-        const openTodos = grep.split("\n").map((l) => l.match(/^[^:]+:([^:]+):(\d+):(.*)$/)).filter(Boolean).slice(0, 20).map((m) => ({ file: m![1]!, line: parseInt(m![2]!, 10), text: m![3]!.trim().slice(0, 120) }));
+        // grep the WORKING TREE (no HEAD): files are checked out on disk, so no per-file
+        // blob lazy-fetch (the blob:none trap that made this slow on giant repos).
+        const grep = g(["grep", "-nI", "-E", "TODO|FIXME|HACK|XXX", "--", "*.ts", "*.tsx", "*.js", "*.py", "*.go", "*.rs"]);
+        const openTodos = grep.split("\n").map((l) => l.match(/^([^:]+):(\d+):(.*)$/)).filter(Boolean).slice(0, 20).map((m) => ({ file: m![1]!, line: parseInt(m![2]!, 10), text: m![3]!.trim().slice(0, 120) }));
         const brief = repoBrief.buildRepoBrief(commits, { repo: gitUrl.replace(/^https?:\/\//, "").replace(/\.git$/, ""), repoCommits, openTodos });
         return send(res, 200, brief);
       } catch (e) { return send(res, 502, { error: (e as Error).message.slice(0, 300) }); } finally { if (handle) handle.dispose(); }
@@ -1033,7 +1035,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       let handle: { path: string; dispose: () => void } | null = null;
       try {
         handle = shallowClone(gitUrl);
-        const g = (args: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...args], { encoding: "utf8", timeout: 60000, maxBuffer: 128 * 1024 * 1024 }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
+        const g = (args: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...args], { encoding: "utf8", timeout: 18000, maxBuffer: 128 * 1024 * 1024 }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
         // parse commits WITH hash + files (seance needs the hash to cite)
         const US = "\x1f", RS = "\x1e";
         const meta = g(["log", "--no-merges", "-n", "1500", `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`]);
