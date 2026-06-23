@@ -70,6 +70,11 @@
   .radarcta .dot{width:9px;height:9px;border-radius:50%;background:#04141b;box-shadow:0 0 0 4px rgba(4,20,27,.18);animation:radarping 1.8s ease-out infinite}
   @keyframes radarping{0%{box-shadow:0 0 0 0 rgba(4,20,27,.35)}70%{box-shadow:0 0 0 9px rgba(4,20,27,0)}100%{box-shadow:0 0 0 0 rgba(4,20,27,0)}}
   .radarsub{display:block;color:var(--sub);font-size:12.5px;margin-top:7px}
+  .explore{display:flex;flex-wrap:wrap;gap:7px 20px;justify-content:center;align-items:center;margin:26px auto 4px;max-width:740px}
+  .explore .ex-lbl{font-size:11.5px;text-transform:uppercase;letter-spacing:.13em;color:var(--sub);opacity:.65}
+  .explore a{color:var(--sub);text-decoration:none;font-size:14.5px;font-weight:650;padding:3px 1px;border-bottom:1.5px solid transparent;transition:color .14s,border-color .14s}
+  .explore a:hover{color:var(--ink);border-color:var(--ink)}
+  .explore .ex-all{color:#0891b2}.explore .ex-all:hover{color:#0e7490;border-color:#0e7490}
   .hint{color:var(--sub);font-size:13.5px;text-align:center;line-height:1.6}
   .hint b{color:var(--ink2);font-weight:560}
   .err{color:var(--red);text-align:center;margin-top:18px;font-size:14.5px}
@@ -495,17 +500,15 @@ document.querySelectorAll(".fontpick button").forEach(function(b){b.addEventList
       <span><b>X-Ray</b> — instant health report: dependencies, secrets, risk &amp; who-to-ask.</span>
       <span><b>📦 AI Pack</b> — bundle the whole repo into one text to paste into any AI chat.</span>
     </div>
-    <div class="radarwrap">
-      <a class="radarcta" href="/suite" title="The Cross-Layer Accountability Suite — live review + radar + the 10 checks"><span class="dot"></span>🕸 Explore the Cross-Layer Accountability Suite &nbsp;→</a>
-      <span class="radarsub">paste any public repo → a graded report in seconds · &nbsp;<a href="/review" style="color:#22d3ee">/review</a> &nbsp;·&nbsp; <a href="/radar" style="color:#22d3ee">Impact Radar</a> &nbsp;·&nbsp; <a href="/suite" style="color:#22d3ee">all 10 checks</a></span>
-    </div>
-    <div class="toolctas" style="display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:16px auto 0;max-width:760px">
-      <a class="radarcta" href="/certify" title="Verified by Mneme — certify AI-worker output into a signed, offline-verifiable certificate + badge" style="background:linear-gradient(90deg,#f6c453,#eab308);color:#3a2c00"><span class="dot" style="background:#3a2c00"></span>🎗️ Verified by Mneme — certify AI output &nbsp;→</a>
-      <a class="radarcta" href="/persona" title="Commit Persona — every contributor's git style as a 3D cartoon, from real git signals" style="background:linear-gradient(90deg,#c4b5fd,#a78bfa);color:#1e1247"><span class="dot" style="background:#1e1247"></span>🎭 Commit Persona — your git style as a 3D cartoon &nbsp;→</a>
-    </div>
-    <span class="radarsub" style="display:block;text-align:center;margin-top:6px">🎗️ <a href="/certify" style="color:#22d3ee">trust certificate</a> for AI-produced work · 🎭 <a href="/persona" style="color:#22d3ee">commit personas</a> for any repo</span>
-    <div class="thymoswrap"><a class="thymoslink" href="/thymos" title="THYMOS — a semantic attention filter that runs in your browser">💗 THYMOS — drowning in a pile? pull what matters to the top (real semantics, in your browser) &nbsp;→</a></div>
-    <p class="hint">Every number is <b>reproducible</b> from git, code &amp; package metadata and sealed with an <b>offline-verifiable</b> signature. <span class="muted">Private repo or a local folder with no public URL? Run <code>npx @mneme-ai/xray bridge</code> on your machine — a <b>Scan a local folder</b> box appears here + your code never leaves your computer.</span></p>
+    <nav class="explore" aria-label="Explore Mneme">
+      <span class="ex-lbl">Explore</span>
+      <a href="/suite">🕸 Accountability Suite</a>
+      <a href="/certify">🎗️ Verify AI output</a>
+      <a href="/persona">🎭 Commit Persona</a>
+      <a href="/thymos">💗 THYMOS</a>
+      <a href="/launch" class="ex-all">See everything →</a>
+    </nav>
+    <p class="hint"><b>Reproducible</b> from git, code &amp; package metadata, sealed with an <b>offline-verifiable</b> signature. <span class="muted">Private or local repo? <code>npx @mneme-ai/xray bridge</code> — a <b>Scan-a-folder</b> box appears here; your code never leaves your computer.</span></p>
     <details class="keybox">
       <summary>🔖 Optional — save your reports</summary>
       <div class="keyhelp">A “key” is just a password you make up (no sign-up). <b>How it works:</b> ① type a key + Save · ② X-Ray any repo above — it's filed under your key automatically · ③ open <b>My repos</b> below to find it anytime, on any device with the same key.</div>
