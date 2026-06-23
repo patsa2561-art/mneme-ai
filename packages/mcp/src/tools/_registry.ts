@@ -114,6 +114,7 @@ import { PR_REVIEW_TOOLS } from "./_pr_review_tools.js";
 import { CONTEXT_PASSPORT_TOOLS } from "./_context_passport_tools.js";
 import { PR_ENGINE_TOOLS } from "./_pr_engine_tools.js";
 import { ARK_TOOLS } from "./_ark_tools.js";
+import { COSMOS_TOOLS } from "./_cosmos_tools.js";
 import { ADAMAS_TOOLS } from "./_adamas_tools.js";
 import { PRISM_TOOLS } from "./_prism_tools.js";
 import { GOLDILOCKS_TOOLS } from "./_goldilocks_tools.js";
@@ -349,6 +350,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...CONTEXT_PASSPORT_TOOLS,
     ...PR_ENGINE_TOOLS,
     ...ARK_TOOLS,
+    ...COSMOS_TOOLS,
     ...ADAMAS_TOOLS,
     ...PRISM_TOOLS,
     ...GOLDILOCKS_TOOLS,

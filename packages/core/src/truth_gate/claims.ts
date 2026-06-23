@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.138.0 — COSMOS: the cosmo-quantum memory core (classically real) ──
+  {
+    id: "claim.cosmos.singularity_and_gravity",
+    source: "v3.138.0 release notes",
+    text: "Mneme's COSMOS is the cosmo-quantum memory core — two black-sheep ideas drawn from a Big-Bang/quantum vision but made CLASSICALLY REAL and MEASURABLE (the literal physics can't run on a classical machine and 'sees the future, never wrong' is unfalsifiable, so — DIAKRISIS — we kept only what transfers). ① the SINGULARITY CODEC compresses accumulated context into a dense seed, then INFLATES only the slice a given problem needs (the inflation moment), touching a fraction of the seed rather than scanning all of it — and it NEVER inflates an irrelevant distractor (generic, low-information links are filtered by IDF): inflate-precision = 1.0, accuracy ≥0.985. ② ENTANGLED-GRAVITY retrieval links memories by shared entities/citations into a graph where each cluster has 'mass' (density); a query falls toward the densest relevant cluster ('semantic gravity'), reaching the right memories while VISITING FEWER NODES than a full scan and matching a brute-force baseline's top-k ≥0.985. cosmosGauntlet=100 (compresses, inflate-precision 1.0, inflate sub-scan, gravity matches full-scan, gravity sub-scan, deterministic, total). CLI `mneme cosmos inflate`/`gravity` (over .mneme/passport); MCP `mneme.cosmos.inflate`/`mneme.cosmos.gravity` (Matrix gRPC auto); reachable via mneme.morph. probe.cosmos.singularity_and_gravity. HONEST (DIAKRISIS): this is quantum-INSPIRED structure on classical math (IDF relevance + a mass-weighted graph pull) — not quantum compute, not precognition; a real compress/expand + gravity-retrieval memory engine.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.cosmos.singularity_and_gravity",
+    severity: "block",
+  },
   // ── v3.136.0 — THE ARK: accountable AI-reproduction & inheritance protocol ──
   {
     id: "claim.ark.accountable_reproduction",

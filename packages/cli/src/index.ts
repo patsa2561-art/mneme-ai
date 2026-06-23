@@ -186,6 +186,7 @@ import { registerPrCommentCommands } from "./commands/pr-comment.js";
 import { registerCtxCommands } from "./commands/ctx.js";
 import { registerLaunchCommands } from "./commands/launch.js";
 import { registerArkCommands } from "./commands/ark.js";
+import { registerCosmosCommands } from "./commands/cosmos.js";
 import { registerMoatCommands } from "./commands/moat.js";
 import { attachRegretOracle } from "./commands/regret.js";
 import { registerTrustCommands } from "./commands/trust.js";
@@ -5044,6 +5045,7 @@ export async function run(argv: string[]): Promise<void> {
   registerCtxCommands(program);
   registerLaunchCommands(program);
   registerArkCommands(program);
+  registerCosmosCommands(program);
   registerMoatCommands(program);
   // ─── Trust calibrator (v1.31.0) -- per-subsystem precision/recall/band
   registerTrustCommands(program);

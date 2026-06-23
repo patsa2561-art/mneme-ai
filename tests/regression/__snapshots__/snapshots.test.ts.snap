@@ -205,10 +205,10 @@ exports[`CLI regression — output structure snapshots > unknown-command error s
 "
 ❓ Unknown command: "nope-not-real"
    Closest matches:
+     • mneme agent-rep   (distance 7)
      • mneme supernova   (distance 8)
      • mneme sentinel   (distance 8)
      • mneme governor   (distance 8)
-     • mneme optional   (distance 8)
 
    Run \`mneme --help\` for the full command list.
 

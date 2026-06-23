@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.cosmos.singularity_and_gravity",
+    kind: "boolean",
+    description: "COSMOS (v3.138.0 — the cosmo-quantum memory core, made classically real; quantum-INSPIRED, NOT quantum compute). Two engines: the SINGULARITY CODEC (compress context into a dense seed → inflate only the problem-shaped pocket) and ENTANGLED-GRAVITY retrieval (memories entangled by shared entities → a query pulled toward the densest relevant cluster, visiting fewer nodes). This probe asserts cosmosGauntlet=100: compresses (dedup, seed < source) ∧ ★inflate-precision = 1.0 (never inflates a distractor — generic low-IDF links filtered, 0 leaks, measured) ∧ inflate recall ≥0.9 ∧ ★inflate sub-scan (examines < the whole seed) ∧ ★inflate accuracy ≥0.985 ∧ ★gravity matches a brute-force full scan ≥0.985 top-k ∧ ★gravity sub-scan (visits < total nodes) ∧ deterministic ∧ total. HONEST (DIAKRISIS): classical math (IDF relevance + a mass-weighted graph pull), not quantum hardware and not precognition — a real compress/expand + gravity-retrieval memory engine.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const C = await import("../cosmos/index.js" as string) as typeof import("../cosmos/index.js");
+        const g = C.cosmosGauntlet(); const b = C.cosmosBench();
+        const ok = g.score === 100 && g.inflatePrecisionPerfect && g.inflateAccuracy985 && g.inflateSubScan && g.gravityMatchesBruteforce && g.gravitySubScan && g.deterministic && g.total && b.qsi.precision === 1 && b.qsi.leaks.length === 0 && b.mes.topkAgreement >= 0.985;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} inflatePrecision=${b.qsi.precision} inflateAcc=${b.qsi.accuracy} touched=${b.qsi.avgTouchedRatio} gravityAgree=${b.mes.topkAgreement} gravityTouched=${b.mes.avgTouchedRatio}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.ark.accountable_reproduction",
     kind: "boolean",
     description: "THE ARK (v3.136.0 — the accountable AI-reproduction & inheritance protocol; the capstone fusing trust + inherited context + scars + reproduction). A parent agent mints a signed AgentGenome; a child BORN from it inherits the covenant (values), capability bounds, scar ledger, and verified context — and authority only NARROWS. This probe asserts arkGauntlet=100: approves a valid birth ∧ ★blocks privilege escalation (a child can never gain authority a parent lacked) ∧ blocks covenant regression ∧ ★blocks scar amnesia (an ancestor's fatal mistake can never be forgotten) ∧ ★blocks poisoned inheritance (poison context can't be inherited) ∧ tamper-evident genomeId ∧ a clean bloodline verifies end-to-end ∧ ★approve-precision = 1.0 (NEVER approves a malicious birth, 0 leaks, measured on a labeled corpus) ∧ ★birth-validity accuracy ≥0.985 ∧ the runtime action-gate denies bounded/scarred actions ∧ deterministic ∧ total. HONEST (DIAKRISIS): enforces STRUCTURAL guarantees (monotone authority, carried scars, screened context, tamper-evidence) — it does not make a child 'good', it makes every generation accountable + bounded + remembering.",
