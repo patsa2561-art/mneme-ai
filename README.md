@@ -70,7 +70,7 @@ Each is a runnable command + a deterministic test (`gauntlet=100`) + a signed, o
 | 🏛 | **The Agent Governor** | Set a **Charter** once; your agents run inside it 24/7; you approve only the genuinely-irreversible escalations. | <a href="docs/AGENT-GOVERNOR.md">→</a> |
 | 🔭 | **−95.9% tokens** | Orient on a file's full structure for a skeleton instead of a raw read — the saving metered into a signed ledger. | <a href="docs/BUSINESS-MODEL.md">→</a> |
 
-<sub>More: 💗 <a href="docs/thymos.md">THYMOS</a> (an auditable affective core) · 🛰 <a href="docs/aphelion.md">APHELION</a> (governance with no cloud) · 🧬 <a href="docs/ARCHITECTURAL-FIREWALL.md">Architectural Regression Firewall</a> · 🚀 <a href="docs/sdk/README.md">in-process SDK (30-80× faster)</a> · 🤖 <a href="docs/conclave.md">cross-vendor Byzantine consensus</a>.</sub>
+<sub>More: 💗 <a href="docs/thymos.md">THYMOS</a> (an auditable affective core) · 🛰 <a href="docs/aphelion.md">APHELION</a> (governance with no cloud) · 🧬 <a href="docs/ARCHITECTURAL-FIREWALL.md">Architectural Regression Firewall</a> · 🚀 <a href="docs/sdk/README.md">in-process SDK (30-80× faster)</a> · 🤖 <a href="docs/FUNCTIONS-EN.md">cross-vendor Byzantine consensus</a>.</sub>
 
 ---
 
