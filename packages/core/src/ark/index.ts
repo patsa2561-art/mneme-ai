@@ -55,6 +55,9 @@ function canon(g: Omit<AgentGenome, "genomeId">): string {
 function seal(body: Omit<AgentGenome, "genomeId">): AgentGenome {
   return { ...body, covenant: { values: uniq(body.covenant.values) }, bounds: uniq(body.bounds), genomeId: sha256(canon(body)) };
 }
+/** Re-seal a (possibly mutated) genome — recompute genomeId from the body. For
+ *  demos/tests that forge a well-formed-but-law-breaking child. Total. */
+export function reseal(g: AgentGenome): AgentGenome { const { genomeId: _omit, ...body } = g; void _omit; return seal(body as Omit<AgentGenome, "genomeId">); }
 export function scarOf(action: string, reason = ""): Scar { return { id: sha256(action).slice(0, 16), action: String(action || ""), reason: String(reason || "") }; }
 
 export interface MintOpts { bounds?: string[]; scars?: Scar[]; context?: PassportEntry[]; ts?: number }
