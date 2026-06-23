@@ -27,27 +27,28 @@
 
 ## What it is, in one picture
 
-You already let AI agents read your code, touch your machine, and call hosted models. **Mneme is the local membrane every one of those actions crosses** — screened, gated, and signed — so you move at full speed *and* can prove what happened, offline, without trusting the vendor.
+You let AI agents read your code, touch your machine, and call hosted models. **Mneme is the local, signed boundary every one of those actions crosses** — it **guards**, **verifies**, and **remembers**, so you move at full speed *and* can prove what happened, offline, without trusting the vendor.
 
 ```mermaid
 flowchart LR
-    AGENT["🤖 Any AI agent<br/>Claude · GPT · Gemini · Grok · Cursor · Cline"]:::agent
-    subgraph MNEME["🧠 MNEME · the local membrane every action crosses"]
+    AGENT["🤖 Any AI agent<br/>Claude · GPT · Gemini · Grok · Cursor"]:::agent
+    subgraph MNEME["🧠 MNEME · one local boundary · signed · MIT"]
         direction TB
-        IN["🧱 INBOUND · Firewall — neutralize prompt-injection"]:::gate
-        OUT["🛤 OUTBOUND · Rail — blind secrets · policy-gate"]:::gate
-        SH["🐺 SHELL · Cerberus — co-sign destructive cmds"]:::gate
-        MEM["♾ MEMORY · Cortex — signed, cross-vendor recall"]:::gate
+        GUARD["🛡 GUARD<br/>injection firewall · secret-blinding · destructive-cmd co-sign"]:::guard
+        VERIFY["🔍 VERIFY<br/>catch hallucinations · grade agent security · certify output"]:::verify
+        MEM["♾ REMEMBER<br/>signed cross-vendor memory + verified context"]:::mem
     end
     MODEL["☁️ Hosted model"]:::ext
     MACHINE["💻 Your code &amp; machine"]:::ext
-    LEDGER["📜 Offline-verifiable<br/>audit + value ledger"]:::ledger
+    LEDGER["📜 Offline-verifiable receipt"]:::ledger
     AGENT <--> MNEME
     MNEME <-->|screened| MODEL
     MNEME <-->|gated| MACHINE
-    MNEME -->|signed receipt| LEDGER
+    MNEME -->|signs every step| LEDGER
     classDef agent fill:#0b1020,stroke:#00d4ff,color:#ffffff;
-    classDef gate fill:#11182f,stroke:#c084fc,color:#e6e6f0;
+    classDef guard fill:#11182f,stroke:#c084fc,color:#e6e6f0;
+    classDef verify fill:#11182f,stroke:#22d3ee,color:#e6e6f0;
+    classDef mem fill:#11182f,stroke:#f0b429,color:#e6e6f0;
     classDef ext fill:#0b1020,stroke:#2da44e,color:#ffffff;
     classDef ledger fill:#1a1206,stroke:#f0b429,color:#ffffff;
 ```
