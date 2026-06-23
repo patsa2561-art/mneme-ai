@@ -2,8 +2,7 @@
 
 > Every claim below passed `mneme launch` (VERICERT) — defensible, no overclaim, no
 > fabricated number. Lead with the one thing a reader can try in 10 seconds.
-> **Replace `https://github.com/marketplace/actions/mneme-pr-context-checks`** with the exact URL on your listing page
-> 
+> The real Marketplace URL (`https://github.com/marketplace/actions/mneme-pr-context-checks`) is already filled in everywhere below — just copy and post.
 
 ---
 
@@ -105,8 +104,7 @@ proof). Curious what context you'd want surfaced on a PR.
 
 ---
 
-## What I (the author) do — the manual steps
-1. Confirm the exact Marketplace URL on the listing page; paste it where `https://github.com/marketplace/actions/mneme-pr-context-checks` is.
-2. Post the HN "Show HN" (best Tue–Thu morning US time), then the X thread, then Reddit.
-3. Reply to early comments fast — that's what moves a Show HN.
-4. (Optional) move the `v3` tag on each future release so `@v3` users get the latest.
+## The manual steps (you, the author)
+1. Post the HN "Show HN" (best Tue–Thu morning US time), then the X thread, then Reddit. Everything is copy-paste — the URLs are already filled in.
+2. Reply to early comments fast — that's what moves a Show HN.
+3. (Optional) move the `v3` tag on each future release so `@v3` users get the latest.
