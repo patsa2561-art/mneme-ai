@@ -1,5 +1,5 @@
 name: "Mneme — PR Context & Checks"
-description: "On every PR, post ONE grounded comment: VERICERT the description, git-native context of every changed file (why it's the way it is, cited), and the author's commit persona. Deterministic, local to your runner, code never leaves CI."
+description: "What every PR review misses: why each changed file is the way it is, and whether the description holds up — from git."
 author: "Mneme"
 branding:
   icon: "git-pull-request"
