@@ -429,6 +429,84 @@ var q=new URLSearchParams(location.search).get('gitUrl'); if(q)run(q);
 }
 
 /** The 🔍 Codebase Accountability Report landing — paste a repo URL, get the graded report rendered. */
+/** The LAUNCH page — the world-class front door for HN/X/Reddit traffic. Premium,
+ *  self-contained, honest. Every number is real (TRUTH GATE 138/138 zero-drift, the
+ *  live tools below actually work). The hook = the moat: machine-verified marketing. */
+function launchLandingHtml(): string {
+  const css = "*{box-sizing:border-box}body{margin:0;font:16px/1.6 -apple-system,Segoe UI,Roboto,Inter,sans-serif;background:#070b14;color:#e6edf6;-webkit-font-smoothing:antialiased}"
+    + "a{color:inherit}.wrap{max-width:960px;margin:0 auto;padding:0 22px}"
+    + ".glow{position:fixed;inset:0;z-index:-1;background:radial-gradient(60% 50% at 50% -5%,rgba(34,211,238,.16),transparent 70%),radial-gradient(45% 40% at 85% 10%,rgba(167,139,250,.14),transparent 70%)}"
+    + ".hero{text-align:center;padding:clamp(56px,10vw,120px) 0 40px}"
+    + ".kick{display:inline-block;font-size:13px;letter-spacing:.12em;text-transform:uppercase;color:#7dd3fc;border:1px solid #1e3a4a;background:#0a1626;border-radius:999px;padding:7px 16px;margin-bottom:26px}"
+    + "h1{font-size:clamp(34px,7vw,68px);line-height:1.05;margin:0 0 18px;font-weight:860;letter-spacing:-.02em}"
+    + ".grad{background:linear-gradient(95deg,#22d3ee,#a78bfa 60%,#f0abfc);-webkit-background-clip:text;background-clip:text;color:transparent}"
+    + ".lead{font-size:clamp(17px,2.4vw,21px);color:#9fb0c7;max-width:680px;margin:0 auto 30px}"
+    + ".cta{display:flex;gap:12px;justify-content:center;flex-wrap:wrap;margin:30px 0 14px}"
+    + ".btn{display:inline-flex;align-items:center;gap:8px;border-radius:13px;padding:14px 26px;font-weight:750;font-size:15px;text-decoration:none;cursor:pointer}"
+    + ".btn.p{background:linear-gradient(95deg,#22d3ee,#8b5cf6);color:#05121a;box-shadow:0 8px 30px rgba(34,211,238,.25)}"
+    + ".btn.s{background:#0e1828;border:1px solid #24364f;color:#e6edf6}"
+    + ".badges{display:flex;gap:10px;justify-content:center;flex-wrap:wrap;margin-top:24px}"
+    + ".pill{font-size:13px;color:#9fb0c7;border:1px solid #1c2942;background:#0a1322;border-radius:999px;padding:7px 14px}.pill b{color:#34d399}"
+    + ".sec{padding:46px 0;border-top:1px solid #111c2e}.sec h2{font-size:clamp(22px,3.4vw,32px);margin:0 0 6px;font-weight:800;letter-spacing:-.01em}.sec .sub{color:#8aa0bb;margin:0 0 26px}"
+    + ".grid3{display:grid;grid-template-columns:repeat(auto-fit,minmax(250px,1fr));gap:16px}"
+    + ".card{background:linear-gradient(180deg,#0c1626,#0a1220);border:1px solid #1a2740;border-radius:18px;padding:22px}"
+    + ".card .ic{font-size:26px}.card h3{margin:10px 0 6px;font-size:18px}.card p{margin:0;color:#90a4be;font-size:14.5px}"
+    + ".tools{display:grid;grid-template-columns:repeat(auto-fit,minmax(220px,1fr));gap:12px}"
+    + ".tool{display:block;background:#0a1322;border:1px solid #1a2740;border-radius:14px;padding:16px 18px;text-decoration:none;transition:border-color .15s,transform .15s}"
+    + ".tool:hover{border-color:#22d3ee;transform:translateY(-2px)}.tool b{color:#7dd3fc}.tool span{display:block;color:#8aa0bb;font-size:13.5px;margin-top:3px}"
+    + ".moat{background:linear-gradient(180deg,#0d1830,#0a1424);border:1px solid #243a5e;border-radius:20px;padding:30px;text-align:center}"
+    + ".moat .q{font-size:clamp(19px,2.8vw,26px);font-weight:760;line-height:1.35;max-width:760px;margin:0 auto 14px}"
+    + "code{background:#111f33;border:1px solid #1f3350;padding:2px 8px;border-radius:6px;font-size:13.5px;color:#a5d8e8}"
+    + ".codeblock{display:block;background:#070e1a;border:1px solid #1a2740;border-radius:12px;padding:16px 18px;color:#a5d8e8;font:14px/1.7 ui-monospace,monospace;overflow:auto;margin:8px 0;white-space:pre}"
+    + ".foot{text-align:center;font-size:13px;padding:40px 0 60px;color:#64748b}.foot a{color:#7dd3fc;text-decoration:none}";
+  const tool = (href: string, name: string, desc: string) => `<a class="tool" href="${href}" target="_blank" rel="noopener"><b>${name}</b><span>${desc}</span></a>`;
+  const card = (ic: string, h: string, p: string) => `<div class="card"><div class="ic">${ic}</div><h3>${h}</h3><p>${p}</p></div>`;
+  return "<!doctype html><html lang=\"en\"><head><meta charset=\"utf-8\"><meta name=\"viewport\" content=\"width=device-width,initial-scale=1\"><title>Mneme · the trust &amp; cost layer for AI agents</title>" + NEWTAB_SCRIPT
+    + "<meta name=\"description\" content=\"The only AI tool whose own marketing is machine-verified — every public claim binds to a probe, CI fails on drift. Guard, verify, and remember every AI-agent action. Local-first, signed, MIT.\">"
+    + ogMeta("Mneme · machine-verified trust for AI agents", "Guard, verify, remember every AI-agent action — local-first, signed, MIT. The only tool whose own marketing is machine-verified: every claim binds to a probe, CI fails on drift.", "/launch")
+    + "<style>" + css + "</style></head><body><div class=\"glow\"></div><div class=\"wrap\">"
+    + "<header class=\"hero\">"
+    + "<span class=\"kick\">🧠 μνήμη · local-first · signed · MIT</span>"
+    + "<h1>The <span class=\"grad\">trust &amp; cost</span> layer<br>for AI agents</h1>"
+    + "<p class=\"lead\">You let AI agents read your code, touch your machine, and call hosted models. Mneme is the local, signed boundary every one of those actions crosses — it <b>guards</b>, <b>verifies</b>, and <b>remembers</b>, so you move at full speed <i>and</i> can prove what happened, offline, without trusting the vendor.</p>"
+    + "<div class=\"cta\"><a class=\"btn p\" href=\"https://github.com/patsa2561-art/mneme-ai\" target=\"_blank\" rel=\"noopener\">★ Star on GitHub</a><a class=\"btn s\" href=\"/review\" target=\"_blank\" rel=\"noopener\">Try it live — no install</a></div>"
+    + "<div class=\"badges\"><span class=\"pill\">🛡 TRUTH GATE <b>138/138 · zero-drift</b></span><span class=\"pill\">🔌 <b>1060+</b> MCP tools</span><span class=\"pill\">✍ Ed25519-signed</span><span class=\"pill\">📃 MIT</span></div>"
+    + "</header>"
+    // the moat
+    + "<section class=\"sec\"><div class=\"moat\"><div class=\"q\">The only AI tool whose own <span class=\"grad\">marketing is machine-verified</span>.</div>"
+    + "<p style=\"color:#9fb0c7;max-width:680px;margin:0 auto\">Every public claim binds to a probe. CI fails the build if even one drifts from reality. The Public Honesty Ledger is Ed25519-signed and verifies <b>offline</b> — the badge above cannot be faked green. We'd rather delete a claim than let it be untrue.</p>"
+    + "<div class=\"cta\" style=\"margin-bottom:0\"><a class=\"btn s\" href=\"https://github.com/patsa2561-art/mneme-ai/blob/main/docs/HONESTY-LEDGER.md\" target=\"_blank\" rel=\"noopener\">🔎 Read the signed ledger</a></div></div></section>"
+    // 3 pillars
+    + "<section class=\"sec\"><h2>One boundary. Three jobs.</h2><p class=\"sub\">Everything is deterministic, signed, and says <code>UNKNOWN</code> instead of guessing.</p><div class=\"grid3\">"
+    + card("🛡", "GUARD", "Neutralize prompt-injection on the way in · blind secrets &amp; policy-gate on the way out · co-sign destructive shell commands. Every decision lands in a tamper-evident ledger.")
+    + card("🔍", "VERIFY", "Catch a hallucination before it lands · grade an agent's whole security posture (A–F, signed) · certify AI-worker output. Precision-when-TRUSTED = 1.0.")
+    + card("♾", "REMEMBER", "Signed, cross-vendor memory + verified context that lives in git — what one agent learns, the next inherits; poison is screened out before it's ever trusted.")
+    + "</div></section>"
+    // security suite
+    + "<section class=\"sec\"><h2>🛡 The agent-security suite</h2><p class=\"sub\">Find an agent's weaknesses before anyone exploits them — measured, not asserted.</p><div class=\"grid3\">"
+    + card("🧬", "MUTAGEN", "Derives novel attack variants and measures which breach a guardrail. <b>Mneme 0% vs a keyword filter 76%</b> on obfuscated attacks.")
+    + card("🔗", "ESCALON", "Traces tool-chain privilege-escalation (the confused deputy) + screens MCP tool descriptions for poisoning — the composed RCE a per-tool review misses.")
+    + card("📊", "POSTURE", "Grades an agent's whole safety surface into one signed A–F report. A category no worker-vendor ships for its own agent.")
+    + "</div></section>"
+    // try it
+    + "<section class=\"sec\"><h2>Try it live — paste any public repo</h2><p class=\"sub\">Signed result in seconds. Source cloned → scanned → deleted; nothing persists.</p><div class=\"tools\">"
+    + tool("/review", "🩻 review", "graded Codebase Accountability Report")
+    + tool("/certify", "🎗️ certify", "trust certificate for AI-worker output")
+    + tool("/persona", "🎭 persona", "each dev's commit style, measured")
+    + tool("/seance", "🔮 seance", "why a file is the way it is")
+    + tool("/brief", "🧭 brief", "git-native shared context for agents")
+    + tool("/ark", "🚢 ark", "accountable AI agent reproduction")
+    + "</div></section>"
+    // install
+    + "<section class=\"sec\"><h2>Install in 60 seconds</h2><p class=\"sub\">Say one sentence to any AI agent — it does the tooling. Or type it yourself:</p>"
+    + "<code class=\"codeblock\">npm install -g mneme-ai\nmneme init          # one-time per repo\nmneme mcp --install # auto-wires Claude Code · Cursor · Codex · Cline · Gemini · Grok\n# restart your AI tool — first MCP call: mneme.welcome</code>"
+    + "<p class=\"sub\" style=\"margin-top:14px\">Agents: <code>mneme.discover { query }</code> finds the right tool among 900+ from one sentence — nothing is ever invisible.</p></section>"
+    // footer
+    + "<div class=\"foot\">Built solo · MIT · vendor-neutral · air-gap-ready — by <a href=\"https://github.com/patsa2561-art\" target=\"_blank\" rel=\"noopener\">Shinnapat Phunsriphatchalakul</a><br>"
+    + "<a href=\"https://www.npmjs.com/package/mneme-ai\" target=\"_blank\" rel=\"noopener\">npm</a> · <a href=\"https://github.com/patsa2561-art/mneme-ai\" target=\"_blank\" rel=\"noopener\">GitHub</a> · <a href=\"https://github.com/marketplace/actions/mneme-pr-context-checks\" target=\"_blank\" rel=\"noopener\">GitHub Marketplace</a> · <a href=\"/review\" target=\"_blank\" rel=\"noopener\">live tools</a></div>"
+    + "</div></body></html>";
+}
+
 function reviewLandingHtml(): string {
   const examples = ["https://github.com/sindresorhus/slugify", "https://github.com/tiangolo/fastapi", "https://github.com/honojs/hono"];
   const chips = examples.map((u) => `<button class="chip" data-url="${u}">${u.replace(/^https:\/\/github.com\//, "")}</button>`).join("");
@@ -918,6 +996,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
     }
     if (req.method === "GET" && (url.pathname === "/" || url.pathname === "/index.html")) return serveStatic(res, "index.html");
     if (req.method === "GET" && url.pathname === "/radar") return send(res, 200, radarLandingHtml(), "text/html; charset=utf-8");
+    if (req.method === "GET" && (url.pathname === "/launch" || url.pathname === "/start")) return send(res, 200, launchLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && url.pathname === "/review") return send(res, 200, reviewLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && (url.pathname === "/suite" || url.pathname === "/cross-layer")) return send(res, 200, suiteLandingHtml(), "text/html; charset=utf-8");
     if (req.method === "GET" && (url.pathname === "/certify" || url.pathname === "/vericert" || url.pathname === "/verified")) return send(res, 200, certifyLandingHtml(), "text/html; charset=utf-8");

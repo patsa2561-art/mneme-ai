@@ -3,6 +3,8 @@
 > Every claim below passed `mneme launch` (VERICERT) — defensible, no overclaim, no
 > fabricated number. Lead with the one thing a reader can try in 10 seconds.
 > The real Marketplace URL (`https://github.com/marketplace/actions/mneme-pr-context-checks`) is already filled in everywhere below — just copy and post.
+>
+> 🌟 **World-class launch landing page (the front door for all this traffic):** **https://xray.mneme-ai.space/launch** — premium, honest, with the live tools + the machine-verified-marketing hook. Link it in the posts.
 
 ---
 
