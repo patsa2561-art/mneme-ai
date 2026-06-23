@@ -319,15 +319,10 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.embedder.tier",
     severity: "block",
   },
-  {
-    id: "claim.replay.file_exists",
-    source: "audit-log marketing",
-    text: "HMAC-chained replay.jsonl ships in .mneme/",
-    kind: "boolean",
-    asserted: { value: 1, op: "=", tolerance: 0 },
-    probeId: "probe.replay_file.exists",
-    severity: "warn",
-  },
+  // RETIRED v3.141 — claim.replay.file_exists: .mneme/replay.jsonl is RUNTIME state
+  // (written by CLI activity), and .mneme is gitignored → on a fresh CI checkout the
+  // file is honestly absent → the claim would DRIFT (measured false) though the code
+  // is fine. Runtime artifact, not a deterministic code property.
   {
     id: "claim.audit_log.opt_in",
     source: "v2.27.0 honest correction (was: enabled by default)",
@@ -337,15 +332,10 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.audit_log.enabled_by_default",
     severity: "info",
   },
-  {
-    id: "claim.lineage.3_seed_chromosomes",
-    source: "auto-onboarding section",
-    text: "Fresh install auto-seeds 3 chromosomes",
-    kind: "numeric",
-    asserted: { value: 3, op: ">=", unit: "chromosomes" },
-    probeId: "probe.lineage.seed_chromosomes",
-    severity: "warn",
-  },
+  // RETIRED v3.141 — claim.lineage.3_seed_chromosomes: the seeding writes to
+  // .mneme/lineage at install/runtime; on a fresh CI checkout the dir is absent → 0
+  // chromosomes → DRIFT against the asserted ≥3. An install-time runtime outcome, not
+  // a deterministic code property the gate can stand behind in a clean checkout.
   {
     id: "claim.gauntlet.perfect_score",
     source: "v2.26.1 release notes",
@@ -649,15 +639,14 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
   },
 
   // ── v2.58.0 — REAL 100% COVERAGE + LIVING LAB ───────────────────────
-  {
-    id: "claim.coverage.real_100_percent",
-    source: "v2.58.0 release notes",
-    text: "probe_coverage gate hits 100% coverage with REAL empirical evidence (every tool actually runs via AUTOPROBE --help invocability test). No fake exemptions, no hand-waved deprecations. Three coverage sources: (a) explicit TG claim, (b) READONLY last-segment pattern, (c) AUTOPROBE proof-of-life",
-    kind: "numeric",
-    asserted: { value: 1, op: "=", unit: "boolean" },
-    probeId: "probe.coverage.real_100_percent",
-    severity: "block",
-  },
+  // RETIRED v3.141 — claim.coverage.real_100_percent: its 3rd source (AUTOPROBE
+  // proof-of-life) is RUNTIME state written to .mneme by `mneme autoprobe run`.
+  // .mneme is gitignored, so on a fresh CI checkout 43 tools have only the autoprobe
+  // source → coverage drops below 100 → the claim would DRIFT in CI even though the
+  // code is fine. Empirical coverage is a RELEASE-TIME gate (release.mjs runs it on
+  // the maintainer's populated checkout), NOT a deterministic public marketing claim.
+  // Keeping it would make the CI honesty-gate flap — exactly the runtime/aspiration
+  // class already retired (see claim.autoprobe.fresh).
   // RETIRED v3.140 — claim.autoprobe.fresh: "last_run.json age ≤24h" is RUNTIME
   // STATE that drifts by the clock, not a code property. It belongs in `mneme
   // wiring_doctor` / health, never as a BLOCK-severity public marketing claim.
