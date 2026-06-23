@@ -2,20 +2,20 @@
   "v": 1,
   "alg": "ed25519",
   "kind": "generic",
-  "subject": "mneme-honesty-ledger@3.143.0",
-  "payloadHash": "2b372c068fe98d06896fcc2ae0942012d49389b588eeae62a2481aa1f55e36da",
+  "subject": "mneme-honesty-ledger@3.144.0",
+  "payloadHash": "1034cf12d027af28127752b3188db266e3599d9d97d13111b209aa1f13ce3f2a",
   "payload": {
     "spec": "MNEME-HONESTY-LEDGER",
     "v": 1,
-    "version": "3.143.0",
-    "generatedAt": "2026-06-23T07:04:01.782Z",
+    "version": "3.144.0",
+    "generatedAt": "2026-06-23T07:24:23.691Z",
     "summary": {
-      "total": 134,
-      "pass": 134,
+      "total": 135,
+      "pass": 135,
       "drift": 0,
       "refuted": 0,
       "unmeasured": 0,
-      "measured": 134,
+      "measured": 135,
       "score": 100,
       "honest": true
     },
@@ -369,7 +369,7 @@
         "probeId": "probe.tool_count",
         "severity": "info",
         "verdict": "pass",
-        "reason": "asserted >= 800 tools; measured 1132"
+        "reason": "asserted >= 800 tools; measured 1133"
       },
       {
         "id": "claim.rewind.card_count_known",
@@ -1218,6 +1218,15 @@
         "reason": "asserted = 1 boolean; measured 1"
       },
       {
+        "id": "claim.mutagen.finds_guardrail_holes",
+        "text": "MUTAGEN is an adversarial-mutation engine that finds an AI agent's guardrail holes by SEARCHING the mutation space: it derives a deterministic population of novel attack variants (injection/destructive/exfil primitives × stacked mutators — ",
+        "source": "v3.144.0 release notes — MUTAGEN",
+        "probeId": "probe.mutagen.finds_guardrail_holes",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted true; measured true"
+      },
+      {
         "id": "claim.honesty_ledger.signed_verifiable",
         "text": "Mneme emits a PUBLIC HONESTY LEDGER — a signed (Ed25519), offline-verifiable record of every public claim + its probe + last-measured verdict. Anyone verifies it with the embedded key alone: the signature, the inline payload hash, AND that ",
         "source": "v3.143.0 release notes — PUBLIC HONESTY LEDGER",
@@ -1230,8 +1239,8 @@
   },
   "issuer": "MCowBQYDK2VwAyEAE8LE7MxyTrZatGLYHP0O4Kj4OoOzKHsRmLJBScBuPmM=",
   "issuerFingerprint": "9de66ee802256bee",
-  "issuedAt": 1782198249696,
+  "issuedAt": 1782199472714,
   "prev": null,
-  "receiptId": "af4efb6e83336d787033cdcd582f735937c85c15e99f597438738929d869a683",
-  "sig": "qBhZJ6FSlZK41vV7VZUiIXIwHG29nGj+DZQO/2Ha15pMSZTHEToDh7UQ0m/yyvIIK1i+fbmAClOKl4izT+NsAg=="
+  "receiptId": "73ebd33a9c314fab2031b99353e2fe732a640b0ff9cd05b3b2af9f083d4c2e66",
+  "sig": "F12yFC/Ic1JWdBJQhq2RHLn4J+1Izhtc5fzfWgMieBTvWsVrRG6ZJMxUUZYcKEKyxiKKLtJrea/nONQX+HWoBg=="
 }

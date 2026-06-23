@@ -3,19 +3,19 @@
 > Auto-generated + Ed25519-signed. Verify offline: `mneme honesty verify` (paste the JSON).
 > This attests every **public claim currently passes its probe** — not that the software is bug-free.
 
-**mneme@3.143.0** · generated 2026-06-23T07:04:01.782Z
+**mneme@3.144.0** · generated 2026-06-23T07:24:23.691Z
 
 | | count |
 |--|--|
-| ✅ pass | 134 |
+| ✅ pass | 135 |
 | 🟠 drift | 0 |
 | 🔴 refuted | 0 |
 | ⚪ unmeasured | 0 |
 | **score** | **100/100** · 🟢 ZERO-DRIFT |
 
-Signed: `9de66ee802256bee` · receipt `af4efb6e83336d78…`
+Signed: `9de66ee802256bee` · receipt `73ebd33a9c314fab…`
 
-<details><summary>All 134 claims</summary>
+<details><summary>All 135 claims</summary>
 
 | claim | verdict | probe |
 |--|--|--|
@@ -152,6 +152,7 @@ Signed: `9de66ee802256bee` · receipt `af4efb6e83336d78…`
 | `claim.bequest.inheritance_math_sound` | ✅ pass | `probe.bequest.inheritance_math_sound` |
 | `claim.exec.roi_math_sound` | ✅ pass | `probe.exec.roi_math_sound` |
 | `claim.egress.sovereign_guard` | ✅ pass | `probe.egress.sovereign_guard` |
+| `claim.mutagen.finds_guardrail_holes` | ✅ pass | `probe.mutagen.finds_guardrail_holes` |
 | `claim.honesty_ledger.signed_verifiable` | ✅ pass | `probe.honesty_ledger.signed_verifiable` |
 
 </details>

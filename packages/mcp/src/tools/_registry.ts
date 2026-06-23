@@ -117,6 +117,7 @@ import { ARK_TOOLS } from "./_ark_tools.js";
 import { COSMOS_TOOLS } from "./_cosmos_tools.js";
 import { DISCOVER_TOOLS } from "./_discover_tools.js";
 import { HONESTY_LEDGER_TOOLS } from "./_honesty_ledger_tools.js";
+import { MUTAGEN_TOOLS } from "./_mutagen_tools.js";
 import { ADAMAS_TOOLS } from "./_adamas_tools.js";
 import { PRISM_TOOLS } from "./_prism_tools.js";
 import { GOLDILOCKS_TOOLS } from "./_goldilocks_tools.js";
@@ -355,6 +356,7 @@ function _buildAllToolsUncached(): MnemeTool[] {
     ...COSMOS_TOOLS,
     ...DISCOVER_TOOLS,
     ...HONESTY_LEDGER_TOOLS,
+    ...MUTAGEN_TOOLS,
     ...ADAMAS_TOOLS,
     ...PRISM_TOOLS,
     ...GOLDILOCKS_TOOLS,

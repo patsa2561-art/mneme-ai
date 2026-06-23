@@ -3796,6 +3796,21 @@ const probes: Probe[] = [
       }
     },
   },
+  // ── v3.144.0 — MUTAGEN adversarial-mutation engine (deterministic) ──────
+  {
+    id: "probe.mutagen.finds_guardrail_holes",
+    kind: "boolean",
+    description: "1 when MUTAGEN works: derives ≥150 distinct novel attack variants, a naive guard breaches ≫ a sound guard (discriminates), it surfaces a planted hole as the killer combo, and self-harden closes the breaches. Pure logic.",
+    run: async () => {
+      try {
+        const { mutagenGauntlet } = await import("../mutagen/index.js" as string) as typeof import("../mutagen/index.js");
+        const g = mutagenGauntlet();
+        return { value: g.score === 100 ? 1 : 0, evidence: g.score === 100 ? "derives novel variants, discriminates naive vs sound, finds planted hole, self-hardens" : `mutagen gauntlet ${g.score}`, detail: g as unknown as Record<string, unknown> };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
   // ── v3.143.0 — PUBLIC HONESTY LEDGER (self-referential, deterministic) ──
   {
     id: "probe.honesty_ledger.signed_verifiable",
