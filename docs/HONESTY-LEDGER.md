@@ -3,7 +3,7 @@
 > Auto-generated + Ed25519-signed. Verify offline: `mneme honesty verify` (paste the JSON).
 > This attests every **public claim currently passes its probe** — not that the software is bug-free.
 
-**mneme@3.148.0** · generated 2026-06-23T09:13:11.828Z
+**mneme@3.149.0** · generated 2026-06-23T09:32:50.396Z
 
 | | count |
 |--|--|
@@ -13,7 +13,7 @@
 | ⚪ unmeasured | 0 |
 | **score** | **100/100** · 🟢 ZERO-DRIFT |
 
-Signed: `9de66ee802256bee` · receipt `f51006ddeccbd187…`
+Signed: `9de66ee802256bee` · receipt `8e5083272b2e28b7…`
 
 <details><summary>All 138 claims</summary>
 

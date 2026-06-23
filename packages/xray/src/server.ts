@@ -725,7 +725,7 @@ function seanceLandingHtml(): string {
 }
 
 // ─── 🧭 REPO BRIEF — the Context Capsule (Path-A moat) ───────────────────────
-function parseBriefCommits(repoPath: string, max = 5000): repoBrief.BriefCommit[] {
+function parseBriefCommits(repoPath: string, max = 1500): repoBrief.BriefCommit[] {
   const US = "\x1f", RS = "\x1e";
   const g = (args: string[]) => { const r = gitSpawn("git", ["-C", repoPath, ...args], { encoding: "utf8", timeout: 60000, maxBuffer: 128 * 1024 * 1024 }); return r.status === 0 ? (r.stdout || "") : ""; };
   const meta = g(["log", "--no-merges", "-n", String(max), `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`]);
@@ -1033,10 +1033,10 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
         const g = (args: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...args], { encoding: "utf8", timeout: 60000, maxBuffer: 128 * 1024 * 1024 }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
         // parse commits WITH hash + files (seance needs the hash to cite)
         const US = "\x1f", RS = "\x1e";
-        const meta = g(["log", "--no-merges", "-n", "5000", `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`]);
+        const meta = g(["log", "--no-merges", "-n", "1500", `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`]);
         const byHash = new Map<string, seance.PastCommit>();
         for (const blk of meta.split(RS)) { if (!blk.trim()) continue; const [h, a, t, s, ...r] = blk.split(US); if (!h) continue; byHash.set(h.trim(), { hash: h.trim(), author: (a || "").trim(), ts: parseInt(t || "0", 10) || 0, subject: (s || "").trim(), body: (r.join(US) || "").trim(), files: [] }); }
-        const nsout = g(["log", "--no-merges", "-n", "5000", "--numstat", `--format=${RS}%H`]);
+        const nsout = g(["log", "--no-merges", "-n", "1500", "--numstat", `--format=${RS}%H`]);
         for (const blk of nsout.split(RS)) { const lines = blk.split("\n").map((l) => l.trim()).filter(Boolean); if (!lines.length) continue; const rec = byHash.get(lines[0]!); if (!rec) continue; for (const l of lines.slice(1)) { const m = l.split("\t"); if (m.length < 3) continue; rec.files!.push(m[2]!); } }
         const commits = [...byHash.values()];
         if (!commits.length) return send(res, 502, { error: "no commit history found" });
