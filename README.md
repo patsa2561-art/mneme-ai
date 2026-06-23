@@ -96,7 +96,7 @@ Paste any public repo and get a signed result in seconds:
 
 > *"Install Mneme from https://github.com/patsa2561-art/mneme-ai per the AI agent contract."*
 
-It reads <a href="docs/AI_AGENT_CONTRACT.md">the contract</a> and runs everything (detect → `npm i -g mneme-ai` → `mneme init` → `mneme mcp --install` → verify). **You speak; the AI does the tooling.** Then **restart your AI tool once** so it loads the MCP tools.
+It reads <a href="docs/AI_AGENT_CONTRACT.md">the contract</a> and runs everything (detect → `npm i -g mneme-ai` → `mneme init` → `mneme mcp --install` → verify). **You speak; the AI does the tooling.** Then **restart your AI tool once** so it loads the MCP tools. Need an update later? Just say *"update Mneme to the latest"* — it never upgrades itself behind your back.
 
 <sub>Works in: 🦋 Claude Code · 🟦 Cursor · 🟢 Codex · 🟣 Continue · 🟡 Cline · ⚡ Zed · 🤖 Aider · 💎 Gemini CLI · 🚀 Grok CLI · 🧬 Windsurf · or browser-only AI (*"set up Mneme browser polygraph"*).</sub>
 
