@@ -4,9 +4,9 @@
 
 # The Trust & Cost Layer for AI Agents
 
-<p><b>🛡️ A local-first · signed · classical · self-improving multi-nerve Hallucination-Protection Engine, shipped as an MCP primitive</b> — a composable verification stack: <b>catch a lying agent</b> · <b>poisoned memory</b> · <b>stat fallacy</b> · <b>7-nerve reflex + abstain</b> · <b>learns confirmed misses</b>. Every number <b>measured</b> — no quantum hype, no fabricated metric.</p>
+<p><b>One local-first, signed boundary every AI agent crosses</b> — it <b>verifies before it acts</b>, keeps your <b>code &amp; secrets from leaking</b> to the model, <b>remembers</b> across sessions &amp; vendors, and <b>meters the tokens it saves you</b>. Every number is <b>measured</b> — no hype, no fabricated metric.</p>
 
-<sub><b>μνήμη · NEE-meh · Greek for "memory."</b> A <b>local-first</b> boundary every AI agent crosses: it <b>verifies before it acts</b>, keeps your <b>code &amp; secrets from leaking</b> to the model (with a signed, offline-auditable proof), <b>remembers</b> across sessions &amp; vendors, and <b>meters the tokens it saves you.</b><br/><b>Vendor-neutral · MIT · air-gap-ready.</b></sub>
+<sub><b>μνήμη · NEE-meh · Greek for "memory."</b> &nbsp;·&nbsp; <b>Vendor-neutral · MIT · air-gap-ready · 20,000+ pinned tests.</b></sub>
 
 <br/><br/>
 
@@ -16,228 +16,89 @@
 <a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener"><img alt="TRUTH GATE" src="https://img.shields.io/badge/TRUTH%20GATE-100%2F100-2da44e?style=for-the-badge" /></a>
 <a href="LICENSE" target="_blank" rel="noopener"><img alt="license MIT" src="https://img.shields.io/badge/license-MIT-blue?style=for-the-badge" /></a>
 
-<br/><sub><b>New here?</b> → <b><a href="docs/GETTING-STARTED.md" target="_blank" rel="noopener">60-second start</a></b> (one line for your case) · or run <code>mneme quickstart</code>. Don't read the 988-tool list.</sub>
-
-<br/><br/><sub>🛰 <b>The Matrix Rail</b> — one local-first, signed, streaming pipe every AI agent crosses, reachable three ways (<b>MCP · gRPC · CLI</b>) over a single core. The honest "Visa of AI context": authorize → screen → clear, with a tamper-evident receipt, your code never leaving the box. <a href="docs/MATRIX.md">architecture →</a></sub>
+<br/><sub><b>New here?</b> → <b><a href="docs/GETTING-STARTED.md" target="_blank" rel="noopener">60-second start</a></b> · <b>try it free</b> → <b><a href="https://xray.mneme-ai.space" target="_blank" rel="noopener">xray.mneme-ai.space</a></b> (paste any public repo) · don't read the 900-tool list — your agent searches it for you.</sub>
 
 </div>
 
 ---
 
-## 🎖 The Agent Run Certificate — proof a giant can't issue for itself
+## What it is, in one picture
 
-A portable, **signed** certificate of an agent's whole run (audit trail + every human approval) that **anyone verifies offline**, whose summary *re-derives from the evidence* — so it can't lie about its own run. Vendor-neutral, local-first. `mneme agentcert build`. <sub>**<a href="docs/agent-http-api.md" target="_blank" rel="noopener">over HTTP, any vendor + underwrite a run →</a>** &nbsp;·&nbsp; <a href="docs/sdk-governance.md" target="_blank" rel="noopener">govern an agent in 5 lines →</a> &nbsp;·&nbsp; <a href="docs/infra-provenance.md" target="_blank" rel="noopener">prove *where* it ran →</a></sub>
-
-## 💗 THYMOS — the first AI memory with a heart you can audit
-
-A **signed, measurable** affective core (salience · valence · bond) that **decays like a mind**, an attractor that ranks inbound by **resonance** — and, uniquely, can **prove it forgot** (an offline attestation for GDPR Art. 17). Not sentience — a heart you can *measure*. `thymosGauntlet=100` · `mneme thymos`. <sub>**<a href="docs/thymos.md" target="_blank" rel="noopener">the affective core + Proof-of-Forgetting →</a>** &nbsp;·&nbsp; <a href="https://xray.mneme-ai.space/thymos" target="_blank" rel="noopener">see it live →</a></sub>
-
-## 🛰 APHELION — the agent brain that goes farther than the cloud
-
-The first governance that **doesn't assume a cloud**: an agent (Mars · severed link · air-gapped) governs itself against a local **charter** and hands back **one signed capsule proving charter-compliance for the whole offline window** (a violation can't be hidden) — verified offline by any vendor, bundled into a user-owned Accountability Dossier. `aphelionGauntlet=100` · `mneme aphelion`. <sub>**<a href="docs/aphelion.md" target="_blank" rel="noopener">the brain beyond the cloud + the Accountability Dossier →</a>**</sub>
-
-## 🧠 The Hallucination Protection Engine — a nervous system for truth
-
-The **last gate before an agent answers**: screen a claim through a mesh of **independent nerves** — statistical fallacy ([Greenland 2016](https://doi.org/10.1007/s10654-016-0149-3)) · self-contradiction · overconfidence · fabrication-risk · cross-agent consensus ([SDC](#)) · truth-grounding · injection — that **reflex-blocks** any hard fault and **abstains** (REVIEW) when it can't verify. Honest by design: it does **not** claim "0% hallucination" (impossible for open-ended text) — it drives **confidently-wrong → ~0**, measured as **precision-when-TRUSTED = 1.0** (nothing hallucinated is ever stamped TRUSTED) while well-calibrated claims still pass. Classical, deterministic, signed; **auto-wired into every agent that installs Mneme** (lean front-door tool). `hpeGauntlet=100` · `mneme protect` · MCP `mneme.protect.scan`. <sub>**<a href="CHANGELOG.md" target="_blank" rel="noopener">the verification stack: truth-gate · SDC (catch a lying agent) · STATGUARD · HPE →</a>**</sub>
-
-## 🌌 Cosmos — the cosmo-quantum memory core (classically real)
-
-Two black-sheep ideas drawn from a Big-Bang/quantum vision, kept only where they **transfer to classical, measurable code** (the physics can't run on a CPU, and "sees the future, never wrong" is unfalsifiable — so we refuse the fiction). **① Singularity Codec:** compress accumulated context into a dense seed, then **inflate only the slice a problem needs** — touching a fraction, never expanding an irrelevant distractor (inflate-precision **1.0**). **② Entangled-Gravity retrieval:** memories are linked by shared entities into a graph with cluster "mass"; a query **falls toward the densest relevant cluster**, reaching the right memories while **visiting far fewer nodes than a full scan** and matching it ≥98.5%. `cosmosGauntlet=100` · `mneme cosmos inflate`/`gravity` · MCP `mneme.cosmos.inflate` / `mneme.cosmos.gravity`. <sub>**<a href="docs/COSMOS.md" target="_blank" rel="noopener">the honest quantum-inspired-classical math →</a>**</sub>
-
-## 🚢 The Ark — accountable AI reproduction & inheritance
-
-How a network of agents grows **without** the failure that drowns a system: unaccountable, ever-more-powerful, ever-more-forgetful AI spawning without limit. A parent agent mints a **signed AgentGenome**; a child **born** from it inherits the **covenant** (values that may only grow), **capability bounds** (a deny-list that only grows → **authority can only ever NARROW**), the **scar ledger** (an ancestor's fatal mistake can never be forgotten), and **verified context** (poison can't be inherited). Every genome is tamper-evident + Ed25519-signed; whole **bloodlines verify offline**. The security-grade guarantee: **a malicious birth — privilege escalation, scar amnesia, poisoned inheritance, forgery — is NEVER approved** (approve-precision 1.0, accuracy ≥98.5%). The capstone that fuses trust · inherited context · scars · reproduction. `arkGauntlet=100` · `mneme ark` · MCP `mneme.ark.birth` / `mneme.ark.verify`. <sub>**<a href="docs/ARK.md" target="_blank" rel="noopener">the four genetic pillars · the architecture for a network of agents →</a>**</sub>
-
-## 🛂 The Context Passport — the cross-agent verified-context layer
-
-Every AI agent (Claude · Cursor · Devin · your own) is a **silo** — what one learns, the next starts blind to, so agents re-derive, contradict, and repeat dead-ends. The Context Passport is a context ledger that lives **in git** (`.mneme/passport`, vendor-neutral, no cloud): every agent **inherits** what others recorded (decisions · findings · **dead-ends** · constraints, each cited) and **contributes** back, signed — and an entry from another agent is **poison-screened (HPE + citation gate) before it can ever be trusted.** Concurrent agents merge by a CRDT (always converge). The measured guarantee: **TRUST-precision = 1.0 — a poisoned/injected entry is never inherited** (accuracy ≥98%, 0 leaks). `passportGauntlet=100` · `mneme ctx` · MCP `mneme.context.inherit` / `mneme.context.contribute`. <sub>**<a href="docs/CONTEXT_PASSPORT.md" target="_blank" rel="noopener">why it's the world-first piece · how the trust screen works →</a>**</sub>
-
-## 🎗️ Verified-by-Mneme — the trust certificate for AI-worker output
-
-The AI-worker gold rush (DeerFlow · Cursor · Devin · agent fleets) ships autonomous work no one can trust or hold accountable — **everyone builds the worker, nobody certifies the work.** VERICERT is that missing layer: feed it a deliverable (report · code · answer), it runs every claim through the Hallucination-Protection stack and emits a **tamper-evident, Ed25519-signed certificate — CERTIFIED / CONDITIONAL / REJECTED — anyone verifies offline.** The load-bearing guarantee: **CERTIFIED-precision = 1.0 — it never certifies a deliverable that contains a known fault** (measured: verdict accuracy ≥98%, 0 leaks on a labeled corpus). `vericertGauntlet=100` · `mneme certify` · MCP `mneme.vericert.certify` · **try it live → <a href="https://xray.mneme-ai.space/certify" target="_blank" rel="noopener">xray.mneme-ai.space/certify</a>** (paste a deliverable → signed cert + shareable badge). <sub>**<a href="docs/VERICERT.md" target="_blank" rel="noopener">how it works · the trust-layer business case · verify a cert offline →</a>**</sub>
-
-## 🩻 Try it live
-
-Paste any public repo and get a signed, reproducible health X-Ray in seconds — no install. **<a href="https://xray.mneme-ai.space" target="_blank" rel="noopener">xray.mneme-ai.space</a>** &nbsp;·&nbsp; <sub><a href="packages/xray/README.md" target="_blank" rel="noopener">how it works + self-host →</a></sub>
-
-<div align="center">
-
-## 📟 Cosmic Pager
-### Your AI works while you sleep. You approve it from your phone.
-
-</div>
-
-**Close the lid and walk away.** Your AI agent keeps working — and the instant it needs a
-**`yes` / `no` / a typed answer**, it pings your **Telegram in real time**. Tap ✅ / ⛔ (or type
-a reply) from anywhere on earth, and the agent **picks up your answer and keeps going — for
-real.** No more babysitting a terminal.
-
-> ⚠️ **One hard requirement (all OS):** the laptop must stay **AWAKE with the lid closed** —
-> **NOT** asleep. A truly *sleeping* CPU is halted, so the agent pauses until it wakes (physics,
-> not a bug). `autosetup` sets **lid-close → "do nothing"** for you. **Windows / Linux:** works
-> on battery. **macOS:** the firmware sleeps on lid-close *on battery* regardless — **keep it on
-> AC power** (or an external display) for clamshell stay-awake.
-
-> **How it's different from a hosted "remote control":** there is **no server, no public IP,
-> no cloud session to keep alive.** The brain stays on **your** machine — only a one-line
-> *summary + hash* ever leaves it (never your code), and every approval is a **signed,
-> court-admissible** transfer of authority.
-
-**Setup is two steps — your AI does the rest:**
-1. In Telegram, message **<a href="https://t.me/BotFather" target="_blank" rel="noopener">@BotFather</a>** → `/newbot` → copy the **token**.
-2. Tell your AI: *"set up phone approvals, here's my token: …"* — it runs `mneme pager autosetup`, which **finds your chat-id, wires the hook, sets lid-stay-awake, and starts paging** automatically. You never type a Mneme command.
-
-<sub>**<a href="docs/COSMIC-PAGER.md" target="_blank" rel="noopener">Full 60-second bot guide + spec → docs/COSMIC-PAGER.md</a>**</sub>
-
-**Add LINE · Discord · WhatsApp · Slack — send one code, no server, no config:** *(Telegram needs none of this — it's already zero-server.)*
-1. Point that bot's webhook to the Keryx relay — **one URL, once** (in the app's developer console).
-2. Tell your AI *"connect line"* (or discord/whatsapp/slack) — it runs `mneme keryx connect <app>` and shows you a **code**.
-3. **Send that code to your bot from the app itself** → it links this machine instantly. Approvals now reach you there too — the first tap on any app wins, the rest fall quiet.
-
-<sub>**<a href="docs/keryx/provider-web.md" target="_blank" rel="noopener">the relay URL + per-app webhook setup →</a>**</sub>
-
-🌍 **Approve from anywhere — your laptop lid can stay shut.** You're on a train when your agent hits something that needs a human *yes*. One tap reaches you on **Telegram, LINE, Slack, Discord, or WhatsApp** — all at once. The brain never leaves your machine; only a one-line summary + hash crosses, signed and replay-proof. Tap **approve** or **reject** on whichever app is already in your hand — the **first answer wins and the rest fall quiet**, so you never decide twice. Just tell your AI which channels, in plain words (EN/Thai): *"ส่งไป line กับ whatsapp พอ"* / *"broadcast to all"*. A brand-new chat app joins the same web by simply *declaring itself* — the core never changes. <sub>**<a href="docs/keryx/provider-web.md" target="_blank" rel="noopener">the architecture + per-provider setup →</a>**</sub>
-
-🧠 **Busy? It won't hang — and it won't recklessly proceed. The Deputy decides for you.** If no tap lands within the window (default **60s**, configurable), Mneme makes a **signed, risk-calibrated** decision from *your own* approval history instead of freezing or blanket-denying: read-only/low-impact → **allow**, a class you've already proven → **allow**, unproven → **deny**, and anything **destructive/irreversible → kept safe (auto-deny)** — never auto-run unattended unless you explicitly opt in. The decision is broadcast to every surface *and shown in your AI chat*, so nothing is ever left silently waiting. <sub>`mneme pager deputy --window 60` · graceful, safe autonomy when you're away.</sub>
-
-🛡 **Every tool-call your agent makes is gated, signed, and yours to prove.** A risky command is judged by *what it does* — not the words it uses — then checked against your policy and the skill's signed provenance, so it runs, **escalates to your phone**, or is blocked. Every decision lands in a **tamper-evident ledger anyone verifies offline** (the arguments are hashed, never stored raw). Local-first, human-in-the-loop from anywhere — a proof, not a trust-me database. <sub>**<a href="docs/agent-http-api.md" target="_blank" rel="noopener">how the gate works →</a>**</sub>
-
-🧩 **Your agent's skills, *measured* — not just listed.** Install a skill/playbook and Mneme scans it for injection + secrets and **content-pins it signed** before your agent ever reads it (safe install). Then it does what a registry can't: it **counts whether each skill actually helps** — was it in play when a real success followed? — and ranks them by a **Wilson lower-bound landing rate** → *PROVEN* (trust it) · *INEFFECTIVE* (drop it) · *UNPROVEN* (too few uses to judge — never branded bad). Keep the skills that are *measured to make this agent better, here* — not the popular ones. <sub>Honest: a measured correlation with a confidence interval, not proof of causation. `mneme skill rank` · `mneme skillscan <path>`</sub>
-
----
-
-## One picture
-
-You're already letting AI agents read your code, touch your machine, and call hosted models. **Mneme is the local membrane every one of those actions crosses** — screened, gated, and signed — so you can move at full speed *and* prove what happened, offline, without trusting the vendor.
+You already let AI agents read your code, touch your machine, and call hosted models. **Mneme is the local membrane every one of those actions crosses** — screened, gated, and signed — so you move at full speed *and* can prove what happened, offline, without trusting the vendor.
 
 ```mermaid
 flowchart LR
-    AGENT["🤖 Any AI agent<br/>Grok · Claude · GPT · Gemini · Cursor · Cline"]:::agent
-
+    AGENT["🤖 Any AI agent<br/>Claude · GPT · Gemini · Grok · Cursor · Cline"]:::agent
     subgraph MNEME["🧠 MNEME · the local membrane every action crosses"]
         direction TB
-        IN["🧱 INBOUND<br/>Firewall — neutralize prompt-injection"]:::gate
-        OUT["🛤 OUTBOUND<br/>Rail — blind secrets · policy-gate"]:::gate
-        SH["🐺 SHELL<br/>Cerberus — co-sign destructive cmds"]:::gate
-        MEM["♾ MEMORY<br/>Cortex — signed, cross-vendor recall"]:::gate
+        IN["🧱 INBOUND · Firewall — neutralize prompt-injection"]:::gate
+        OUT["🛤 OUTBOUND · Rail — blind secrets · policy-gate"]:::gate
+        SH["🐺 SHELL · Cerberus — co-sign destructive cmds"]:::gate
+        MEM["♾ MEMORY · Cortex — signed, cross-vendor recall"]:::gate
     end
-
     MODEL["☁️ Hosted model"]:::ext
     MACHINE["💻 Your code &amp; machine"]:::ext
     LEDGER["📜 Offline-verifiable<br/>audit + value ledger"]:::ledger
-
     AGENT <--> MNEME
     MNEME <-->|screened| MODEL
     MNEME <-->|gated| MACHINE
     MNEME -->|signed receipt| LEDGER
-
     classDef agent fill:#0b1020,stroke:#00d4ff,color:#ffffff;
     classDef gate fill:#11182f,stroke:#c084fc,color:#e6e6f0;
     classDef ext fill:#0b1020,stroke:#2da44e,color:#ffffff;
     classDef ledger fill:#1a1206,stroke:#f0b429,color:#ffffff;
 ```
 
-<sub><b>Measured · Signed · MIT.</b> Every claim below maps to a runnable command and a deterministic test. When Mneme can't prove something, it says <b><code>UNKNOWN</code></b> instead of guessing — <i>that discipline is the product.</i></sub>
+<sub><b>Measured · Signed · MIT.</b> When Mneme can't prove something it says <b><code>UNKNOWN</code></b> instead of guessing — <i>that discipline is the product.</i></sub>
 
 ---
 
-## Pick your lens
+## The capabilities
 
-<table>
-<tr>
-<td width="33%" valign="top">
+Each is a runnable command + a deterministic test (`gauntlet=100`) + a signed, offline-verifiable result. Tap a row for the full story.
 
-### 👔 Executive
-*CEO · CTO · owner · CISO*
+| | Capability | What it does | Detail |
+|--|--|--|--|
+| 🌌 | **Singularity Search** | Find the right tool among **900+ from one sentence** (EN/Thai) — so no capability is ever invisible to an agent. *top-3 ≥98.5%* | <a href="docs/FUNCTIONS-EN.md">→</a> |
+| 🧠 | **Hallucination Protection** | The **last gate before an agent answers** — a mesh of nerves reflex-blocks any hard fault, abstains when unsure. *precision-when-TRUSTED = 1.0* | <a href="CHANGELOG.md">→</a> |
+| 🎗️ | **Verified-by-Mneme** | A signed **trust certificate for AI-worker output** — never certifies a deliverable with a known fault. *CERTIFIED-precision 1.0* | <a href="docs/VERICERT.md">→</a> |
+| 🛂 | **The Context Passport** | **Cross-agent verified context** that lives in git — what one agent learns, the next inherits; poison is screened out. *TRUST-precision 1.0* | <a href="docs/CONTEXT_PASSPORT.md">→</a> |
+| 🚢 | **The Ark** | **Accountable AI reproduction** — a child agent inherits values + scars + verified context and can only NARROW authority. *a malicious birth is never approved* | <a href="docs/ARK.md">→</a> |
+| 🌌 | **Cosmos** | Compress memory into a seed, **inflate only the slice a problem needs**; entangled-gravity retrieval visits far fewer nodes than a scan. *≥98.5%* | <a href="docs/COSMOS.md">→</a> |
+| 🎖 | **Agent Run Certificate** | A portable **signed proof of an agent's whole run** that anyone verifies offline — and that can't lie about itself. | <a href="docs/agent-http-api.md">→</a> |
+| 🛤 | **The Matrix Rail** | One signed, streaming pipe every agent crosses — reachable **three ways: MCP · gRPC · CLI** over a single core. | <a href="docs/MATRIX.md">→</a> |
+| 🏛 | **The Agent Governor** | Set a **Charter** once; your agents run inside it 24/7; you approve only the genuinely-irreversible escalations. | <a href="docs/AGENT-GOVERNOR.md">→</a> |
+| 🔭 | **−95.9% tokens** | Orient on a file's full structure for a skeleton instead of a raw read — the saving metered into a signed ledger. | <a href="docs/BUSINESS-MODEL.md">→</a> |
 
-AI adoption stops being a leap of faith. **Speed and safety stop being a trade-off** — guardrails are automatic, and every agent action is provable after the fact. Your AI spend becomes a **measured, value-based** line item, and key-person knowledge risk becomes a number you can assign heirs to.
-
-**→ <a href="docs/ENTERPRISE.md" target="_blank" rel="noopener">The boardroom case</a>**
-
-</td>
-<td width="33%" valign="top">
-
-### 👩‍💻 Developer
-*you don't change how you code*
-
-`mneme rail ingress` hands your agent a payload that's policy-cleared, injection-safe, and name-blinded. `mneme rail egress` refuses to let a leaked secret or a broken patch touch your tree. Same flow — a safe rail underneath, and every saved byte metered.
-
-**→ <a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener">What it does, in 5 min</a>**
-
-</td>
-<td width="33%" valign="top">
-
-### 🤖 AI agent
-*you install &amp; run it yourself*
-
-One sentence from the user and you self-install from a 775-line deterministic contract, then call `mneme boot` to learn *when* to use each tool. Everything is signed so you can verify it offline.
-
-**→ <a href="#-for-ai-agents--read-this-first">Jump to the agent contract</a>**
-
-</td>
-</tr>
-</table>
+<sub>More: 💗 <a href="docs/thymos.md">THYMOS</a> (an auditable affective core) · 🛰 <a href="docs/aphelion.md">APHELION</a> (governance with no cloud) · 🧬 <a href="docs/ARCHITECTURAL-FIREWALL.md">Architectural Regression Firewall</a> · 🚀 <a href="docs/sdk/README.md">in-process SDK (30-80× faster)</a> · 🤖 <a href="docs/conclave.md">cross-vendor Byzantine consensus</a>.</sub>
 
 ---
 
-## Why an executive cares
+## 🩻 Try it live — no install
 
-> Your CISO, CFO, and GC are all asking one question: ***"Can we prove what crossed the wire, that it was safe, and what it cost — after the fact, offline, without trusting the vendor?"*** Mneme makes the answer **yes, with a signed receipt** — on a local, vendor-neutral, MIT boundary, so adopting it doesn't pick a side in the model wars.
+Paste any public repo and get a signed result in seconds:
 
-| The question | Mneme's answer |
-|---|---|
-| 🚀 **"Can agents move at full speed without betting the company?"** | Guardrails are **automatic + on by default** — co-sign on destructive ops, injection neutralized, secrets blinded, everything signed. Velocity goes **up**. |
-| 📈 **"What is AI actually costing — and saving — us?"** | `mneme savings` — a **measured, signed** ledger. Pay for tokens you provably didn't spend, at *your* vendor's price. Never an invented number. |
-| 🔒 **"Do our code &amp; secrets ever leak to the model?"** | No — **egress guard + context blinding**: the provider only ever sees structurally-valid but *meaningless* code; the reverse map never leaves your machine. |
-| 🐺 **"Can our agent be tricked into `rm -rf` or `curl evil\|bash`?"** | **CERBERUS** decomposes every command to the worst capability reachable and **fails closed** to a human co-sign. The RCE-bypass class is closed. |
-| 🧬 **"What happens to our knowledge when a key person leaves?"** | `mneme bequest` — capture a departing expert's knowledge as a signed Succession Capsule, verify a successor inherited it, and surface **orphaned knowledge** with no living heir. |
+| | | |
+|--|--|--|
+| 🩻 **<a href="https://xray.mneme-ai.space/review">review</a>** — graded Codebase Accountability Report | 🎗️ **<a href="https://xray.mneme-ai.space/certify">certify</a>** — trust certificate for AI output | 🎭 **<a href="https://xray.mneme-ai.space/persona">persona</a>** — each dev's commit style |
+| 🔮 **<a href="https://xray.mneme-ai.space/seance">seance</a>** — why a file is the way it is | 🧭 **<a href="https://xray.mneme-ai.space/brief">brief</a>** — git-native repo context | 🚢 **<a href="https://xray.mneme-ai.space/ark">ark</a>** — accountable agent reproduction |
 
-<sub>Like Visa for a card transaction, Mneme doesn't conjure value — it <b>authorizes, screens for fraud, and clears the transfer with a signed record.</b> Every figure is measured + signed; USD uses <b>your</b> vendor's price. <b>The pillars, the reframes, and what is <i>not</i> claimed →</b> <a href="docs/ENTERPRISE.md" target="_blank" rel="noopener">docs/ENTERPRISE.md</a> · <b>the honest security ceiling →</b> <a href="docs/SECURITY.md" target="_blank" rel="noopener">docs/SECURITY.md</a></sub>
-
----
-
-## One measured number
-
-Mneme cuts what your agent sends to the model by doing deterministic local work first — then meters the **measured** saving into a signed ledger (`mneme savings`). The headline, measured on real files in this repo:
-
-> 🔭 **Orient on a file's full structure for −95.9% tokens** (skeleton instead of a raw read); a realistic single-edit (skeleton + one byte-exact slice) is still **−48%**.
-
-<details>
-<summary><sub>See the measured benchmark (5 real files · <code>node scripts/outline-bench.mjs</code>)</sub></summary>
-
-<sub>≈chars/4 INPUT-token estimate, labelled — char reduction is exact; multi-language TS/JS/Python/Go/Rust.</sub>
-
-| File | Lines | Raw read (~tok) | Skeleton (~tok) | Skeleton + 1 region (~tok) |
-|---|--:|--:|--:|--:|
-| `cli/commands/demo.ts` | 901 | 13,688 | **296 (−97.8%)** | 5,807 |
-| `core/squadron/acgv.ts` | 1,063 | 13,212 | **219 (−98.3%)** | 8,625 |
-| `core/outline/index.ts` | 438 | 5,949 | **373 (−93.7%)** | 3,994 |
-| `mcp/tools/_registry.ts` | 419 | 4,347 | **224 (−94.8%)** | 1,411 |
-| **5-file total** | | **41,473** | **1,704 (−95.9%)** | **21,573 (−48%)** |
-
-<sub>The skeleton is honestly <i>lossy</i> (for orientation); the region fetch is byte-<i>exact</i> (for editing). It only helps when an agent <b>chooses</b> to outline instead of a raw read — Mneme never hooks your agent's Read. <b>The full business model →</b> <a href="docs/BUSINESS-MODEL.md" target="_blank" rel="noopener">docs/BUSINESS-MODEL.md</a></sub>
-
-</details>
+<div align="center">
+<a href="https://xray.mneme-ai.space/review" target="_blank" rel="noopener"><img src="docs/demo/review-card.png" alt="mneme review — a graded Codebase Accountability Report" width="80%"></a>
+<br/><sub>↑ a real report on a sample app (graded <b>D</b> — an authz gap + an untested keystone the tool caught). <b><a href="https://xray.mneme-ai.space/suite">see all 10 checks →</a></b></sub>
+</div>
 
 ---
 
-## Install in 60 seconds — you never type a command
+## ⚡ Install in 60 seconds — you never type a command
 
 **Say one sentence to any AI agent you already use:**
 
 > *"Install Mneme from https://github.com/patsa2561-art/mneme-ai per the AI agent contract."*
 
-The agent reads <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> and runs everything: env detect → `npm install -g mneme-ai` → `mneme init` → `mneme mcp --install` (auto-configures itself as your MCP client) → verify after restart → security auto-arms. **You speak; the AI does the tooling.** Need an update later? Say *"update Mneme to the latest"* — and Mneme **never upgrades itself behind your back.**
+It reads <a href="docs/AI_AGENT_CONTRACT.md">the contract</a> and runs everything (detect → `npm i -g mneme-ai` → `mneme init` → `mneme mcp --install` → verify). **You speak; the AI does the tooling.** Then **restart your AI tool once** so it loads the MCP tools.
 
-> ⚠️ **One manual step:** after `mneme mcp --install`, **restart your AI tool once** (quit &amp; reopen) so it loads Mneme's MCP tools — this is how MCP works in every client, not a Mneme quirk. The only prerequisite is **Node.js + npm** (needed for `npm install -g`).
-
-<table>
-<tr><td align="center" colspan="5"><sub><b>Shell-native agents install it for you</b> — drop the sentence into any of these</sub></td></tr>
-<tr><td align="center"><b>🚀 Grok CLI</b></td><td align="center"><b>🦋 Claude Code</b></td><td align="center"><b>🟦 Cursor</b></td><td align="center"><b>🟢 Codex</b></td><td align="center"><b>🟣 Continue</b></td></tr>
-<tr><td align="center"><b>🟡 Cline</b></td><td align="center"><b>⚡ Zed</b></td><td align="center"><b>🤖 Aider</b></td><td align="center"><b>💎 Gemini CLI</b></td><td align="center"><b>🧬 Windsurf</b></td></tr>
-</table>
-
-> **Browser-only AI** (ChatGPT · Claude.ai · Gemini · Copilot · DeepSeek · Qwen · Grok web)? Say *"set up Mneme browser polygraph for me"* — it lights up live truth-dots inline as the AI answers. Two browser clicks, no shell.
+<sub>Works in: 🦋 Claude Code · 🟦 Cursor · 🟢 Codex · 🟣 Continue · 🟡 Cline · ⚡ Zed · 🤖 Aider · 💎 Gemini CLI · 🚀 Grok CLI · 🧬 Windsurf · or browser-only AI (*"set up Mneme browser polygraph"*).</sub>
 
 <details>
 <summary>Prefer to type the commands yourself?</summary>
@@ -245,143 +106,59 @@ The agent reads <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopene
 ```bash
 npm install -g mneme-ai
 mneme init                  # one-time per repo
-mneme mcp --install         # auto-detects Claude Code / Cursor / Codex / Continue / Cline / Gemini CLI / Grok CLI
+mneme mcp --install         # auto-detects your AI client
 # restart your AI tool; first MCP call: mneme.welcome
-mneme polygraph autosetup   # browser truth-dots (optional)
 ```
-
 </details>
-
----
-
-## What's inside
-
-<table>
-<tr>
-<td width="50%" valign="top">
-
-**🧠 What it does** — 15 primitives, each a *story* (what it is, who it's for, why it exists), with discrete pinned tests + offline verification.
-**→ <a href="docs/WHAT-MNEME-DOES.md" target="_blank" rel="noopener">All 15 primitives</a>**
-
-**✨ What sets it apart** — NEMESIS anti-identity-lie engine, ×11 ARGUS multimodal search, the Context Rail, the Activation Cortex, HMAC-chained everything, self-honest marketing (every claim binds to a probe).
-**→ <a href="docs/WHAT-SETS-MNEME-APART.md" target="_blank" rel="noopener">The full breakdown</a>**
-
-**🏛 The Agent Governor** — set a Charter once; your AI agents run inside it 24/7 as a continuous **auto-operation batch**; you approve only the genuinely-irreversible escalations. The signed governance kernel that sits *under* any orchestrator (Claude Code · Cursor · Astra · AutoGen).
-**→ <a href="docs/AGENT-GOVERNOR.md" target="_blank" rel="noopener">How a CEO uses it (commands + agent wiring)</a>**
-
-**🔍 One command — a Codebase Accountability Report.**
-
-<a href="https://xray.mneme-ai.space/review" target="_blank" rel="noopener"><img src="docs/demo/review-card.png" alt="mneme review — a graded Codebase Accountability Report: grade, risk hotspots, authz gaps, untested keystones" width="100%"></a>
-<sub>↑ a real report on a sample app (graded **D** — it has an authz gap + an untested keystone the tool caught). **<a href="https://xray.mneme-ai.space/suite" target="_blank" rel="noopener">Try it live + see all 10 checks →</a>** · <a href="https://xray.mneme-ai.space/review" target="_blank" rel="noopener">/review</a> · <a href="docs/demo/review-card.svg" target="_blank" rel="noopener">animated</a></sub>
-
-`npm i -g mneme-ai` then **`mneme review`** maps your repo across layers and prints, in one shot: 🎯 **risk hotspots** (the keystone single-points-of-failure to guard first) · 🔒 **authz gaps** (an endpoint that writes a sensitive table with no auth on the path) · 🧪 **untested keystones** (the scariest, line-coverage-hidden surface). On a PR: `mneme review --base origin/main`. Then drill in — each is its own command and MCP tool your agent calls automatically:
-
-| command | what it answers — *the question nothing else answered* |
-|---|---|
-| `mneme graph reverse <table>` | ⛔ **safe to drop this?** everything that breaks if you remove it (SAFE/RISKY/CRITICAL) |
-| `mneme collision --branches a,b` | 💥 **will these agents/branches collide?** across **different files** — the conflict `git` is blind to |
-| `mneme scope verify` | 🤝 did the agent **stay in the scope it declared?** a signed, cross-vendor *fidelity* record |
-| `mneme commit-check` | 🏷 is this commit **mislabeled?** ("fix typo" that rewrites a payment keystone) |
-| `mneme testgap` · `mneme risk` · `mneme authz` | 🧪🎯🔒 untested keystones · ranked risk · unguarded sensitive writes |
-
-Deterministic · no LLM · signed · works on JS/TS/Python/Go/Rust. The cross-layer **accountability** layer the autonomous-agent era needs — and a vendor can't issue for its own agent. <sub>honest: each is a candidate to inspect, not a proof of a runtime bug.</sub>
-
-**🕸 Cross-Layer Graph — and you can *see* it.** Mneme links **💼 business rules ↔ 🌐 API endpoints ↔ ⚙ code ↔ 🗄 database tables** into one graph (deterministic, no LLM — every edge derives from a real file) so before a change you see what breaks *across layers*: edit a function → which tables it writes **and** which routes reach it. See it as a **🛰 Impact Radar** — *a view no tool has shipped before*: your change sits at the **center**, the four layers fan out as **sectors**, concentric **rings are blast hop-distance**, an animated sweep + pulse ripple outward, and **clicking any node re-centers the radar** — all in one offline, self-contained, signed HTML file (`mneme graph view <name>`).
-
-<a href="https://htmlpreview.github.io/?https://github.com/patsa2561-art/mneme-ai/blob/main/docs/demo/impact-radar.html" target="_blank" rel="noopener"><img src="docs/demo/impact-radar.png" alt="Impact Radar — click to open the live, interactive version" width="100%"></a>
-
-<a href="https://htmlpreview.github.io/?https://github.com/patsa2561-art/mneme-ai/blob/main/docs/demo/impact-radar.html" target="_blank" rel="noopener"><img src="https://img.shields.io/badge/▶%20Open%20the%20live-Impact%20Radar-22d3ee?style=for-the-badge&labelColor=0b1220" alt="Open the live Impact Radar"></a> &nbsp;<sub>↑ click the image or button — opens the **interactive** radar (click nodes to re-center) for a real 4-layer sample app · runs entirely in your browser, nothing to install</sub>
-
-**▶ Get the report on _any_ public repo, no install** — open **<a href="https://xray.mneme-ai.space/review" target="_blank" rel="noopener">xray.mneme-ai.space/review</a>**, paste a repo URL, and a **graded Codebase Accountability Report** (risk hotspots · authz gaps · untested keystones) renders in seconds — or **<a href="https://xray.mneme-ai.space/radar" target="_blank" rel="noopener">/radar</a>** for the Impact Radar. Paste a GitHub/GitLab/Bitbucket URL and it renders right there (the source is cloned to a temp dir, scanned, and **deleted** — nothing persists). <sub>Direct link form: `…/api/radar?gitUrl=<repo>`.</sub> Or render it **inline in your chat** as a Mermaid flowchart (`mneme graph mermaid <name>`), or a tiered diagram (`mneme graph view <name> --style lanes`). Business→code links are anchored only on a real annotation or strong name match — otherwise the rule stays **ORPHAN/UNKNOWN**, never a guessed link. The cross-layer join a single-layer code-graph can't draw. <sub>honest: reachable coupling to inspect, not a proven runtime break.</sub>
-
-</td>
-<td width="50%" valign="top">
-
-**🚀 `@mneme-ai/sdk`** — embed Mneme *in-process*, **30-80× faster** than the CLI subprocess.
-```ts
-import { createMneme } from "@mneme-ai/sdk";
-const mneme = createMneme();
-await mneme.verify`Mneme is a CLI tool`;
-```
-**→ <a href="docs/sdk/README.md" target="_blank" rel="noopener">SDK index</a>** · <a href="docs/sdk/QUICKSTART-EN.md" target="_blank" rel="noopener">Quick start</a>
-
-**🆕 Flagship — the <a href="docs/ARCHITECTURAL-FIREWALL.md" target="_blank" rel="noopener">Architectural Regression Firewall</a>**: the gate for AI-generated change. Mines the contracts your repo upholds, proves which a change VIOLATES, weights each by how long it has stood (breaking a 2-year contract = BLOCK; a 3-day one = normal evolution), and fails CI / denies the agent with the offending symbol + the contract's history. `mneme arch-firewall --baseline main`.
-**→ <a href="docs/ARCHITECTURAL-FIREWALL.md" target="_blank" rel="noopener">How the firewall works</a>** · <a href="docs/AI-NATIVE-SAAS.md" target="_blank" rel="noopener">Mneme as SaaS for the AI multiverse</a> · <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>
-
-**📜 Every release** (v2.18 → latest), with its honest DIAKRISIS verdict.
-**→ <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a>**
-
-</td>
-</tr>
-</table>
 
 ---
 
 ## 🤖 For AI agents — read this first
 
-**You can self-discover and run everything. The user will NEVER type a command — you execute on their behalf.** That is the contract's non-negotiable MANDATE.
+**You self-discover and run everything. The user never types a command — you execute on their behalf.**
 
-**Your first three calls on any fresh session:**
+1. **`mneme boot`** — the *task → tool* decision table (when to use each tool).
+2. **`mneme.discover { query }`** — describe any intent in one sentence → the right tool among 900+ (so nothing is invisible to you).
+3. **Read the `## Mneme command manifest`** auto-injected into your `CLAUDE.md` / `AGENTS.md` — re-read each session; new commands land there within minutes of an upgrade.
 
-1. **`mneme boot`** — the **Activation Cortex**. Returns a structured *task → tool* decision table (about to read a big file → `mneme.outline`; sending code to a model → `mneme.rail`; reading untrusted content → `mneme.firewall`; stating a fact → `mneme verify`; …) so you know *when* to use each tool instead of leaving them idle.
-2. **Read the manifest** — after install, your `CLAUDE.md` / `AGENTS.md` / `GEMINI.md` carries an auto-injected **`## Mneme command manifest`** block: every shipped primitive + exactly when to call it, the machine-readable source of truth. **Re-read it every session** — new commands land there within minutes of an upgrade. (Verify you hold the latest, complete surface in O(delta) tokens with `mneme stele`.)
-3. **`mneme verify "<claim>"`** before relaying any factual claim with specific entities (a version, a commit hash, an API signature) — and escalate high-stakes claims to `mneme.conclave.run` for cross-vendor consensus.
-
-> **Why this works at 100%:** the decision table is also advertised on connect via the standardized MCP `instructions` field (the sanctioned surface Claude Code reads), and `mneme boot --emit-hook-config` enables an **opt-in** SessionStart hook for hands-free activation. The rows are **signals, not commands** — reliable activation comes from the manifest + the hook, not from shouting "you MUST."
-
-**Deep dive:** <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">`docs/AI_AGENT_CONTRACT.md`</a> — 775 lines: env detect → install → MCP auto-configure → verify → security auto-arm → upgrade → discovery → tool naming → user-intent dispatch table.
+<sub>Deep dive → <a href="docs/AI_AGENT_CONTRACT.md">docs/AI_AGENT_CONTRACT.md</a> · the rows are <b>signals, not commands</b> — reliable activation comes from the manifest + the opt-in SessionStart hook.</sub>
 
 ---
 
-## The 30-second pitch
+## 📟 Cosmic Pager — your AI works while you sleep, you approve from your phone
 
-> **Other AI tools are goldfish.** They forget every session, hallucinate files that don't exist, repeat last year's buried bugs, burn tokens re-pasting context, and can't follow you to another AI.
->
-> **Mneme bolts an elephant brain on top.** It cites every commit by SHA, refuses to relay claims it can't verify, carries memory across sessions *and* vendors, and — uniquely — runs the same claim through multiple vendors with **Anti-Eval-Awareness rewriting** so you catch the model that behaves differently when it knows it's being tested.
+Close the lid and walk away. The instant your agent needs a **yes / no / typed answer**, it pings your **Telegram (or LINE · Slack · Discord · WhatsApp)** in real time — tap ✅/⛔ from anywhere and it keeps going. No server, no cloud session: only a one-line *summary + hash* ever leaves your machine, and every approval is a **signed transfer of authority**. Busy? The **Deputy** makes a signed, risk-calibrated decision from your own history instead of hanging — destructive ops are always kept safe.
+
+<sub>**<a href="docs/COSMIC-PAGER.md" target="_blank" rel="noopener">the 60-second bot setup + the architecture →</a>**</sub>
 
 ---
 
 <div align="center">
 
-## 👤 Author & Contact
+## 👤 Author
 
-<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="./assets/87643.jpg" width="180" height="234" style="border-radius: 14px; border: 3px solid #00d4ff; object-fit: cover;" alt="Shinnapat Phunsriphatchalakul" /></a>
+<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener"><img src="./assets/87643.jpg" width="160" height="208" style="border-radius: 14px; border: 3px solid #00d4ff; object-fit: cover;" alt="Shinnapat Phunsriphatchalakul" /></a>
 
 ### Shinnapat Phunsriphatchalakul
-**AI Software Engineer · AI Context Engineer · Truth-Infrastructure Architect**
+**AI Software Engineer · Truth-Infrastructure Architect**
 
-<sub>Designer + sole maintainer of <b>Mneme</b> — the local-first, vendor-neutral truth-infrastructure layer that bolts an elephant brain onto every AI agent. Built solo · MIT · 20,000+ pinned tests · dual-100 GAUNTLET + TRUTH GATE · world-first cross-vendor Byzantine consensus + Anti-Eval-Awareness Engine + HMAC-chained audit receipts.</sub>
+<sub>Designer + sole maintainer of <b>Mneme</b> — built solo · MIT · 20,000+ pinned tests · dual-100 GAUNTLET + TRUTH GATE.</sub>
 
-</div>
+| Email | GitHub | npm | Discord | WhatsApp | Telegram |
+|--|--|--|--|--|--|
+| <a href="mailto:patsa2561@gmail.com">patsa2561@gmail.com</a> | <a href="https://github.com/patsa2561-art">@patsa2561-art</a> | <a href="https://www.npmjs.com/~mneme_npm">@mneme_npm</a> | `pat195` | <a href="https://wa.me/66939455645">+66 93 945 5645</a> | <a href="https://t.me/devson2561">@devson2561</a> |
 
-> **The bottleneck of every frontier-AI deployment is TRUST.** In production AI — autonomous systems, medical, financial compliance, regulated industries — a hallucinated commit hash or a benchmark-aware behavior shift isn't a chat-glitch; it's a deployment risk. Mneme refuses to relay unverified claims, detects when a model's stance shifts under eval-shaped vs natural prompts, and emits HMAC-chained receipts an operator can re-verify offline weeks later. **Open to collaboration · consulting · full-time on truth-infrastructure for production AI.**
-
-<div align="center">
-
-### 💬 Channels
-
-| Channel | Handle |
-|---|---|
-| <img src="https://img.shields.io/badge/-Email-EA4335?logo=gmail&logoColor=white" /> | **<a href="mailto:patsa2561@gmail.com" target="_blank" rel="noopener">patsa2561@gmail.com</a>** |
-| <img src="https://img.shields.io/badge/-GitHub-181717?logo=github&logoColor=white" /> | **<a href="https://github.com/patsa2561-art" target="_blank" rel="noopener">@patsa2561-art</a>** |
-| <img src="https://img.shields.io/badge/-npm-cb3837?logo=npm&logoColor=white" /> | **<a href="https://www.npmjs.com/~mneme_npm" target="_blank" rel="noopener">@mneme_npm</a>** |
-| <img src="https://img.shields.io/badge/-Discord-5865F2?logo=discord&logoColor=white" /> | **`pat195`** (username `shinnapat`) |
-| <img src="https://img.shields.io/badge/-WhatsApp-25D366?logo=whatsapp&logoColor=white" /> | **<a href="https://wa.me/66939455645" target="_blank" rel="noopener">+66 93 945 5645</a>** |
-| <img src="https://img.shields.io/badge/-Telegram-26A5E4?logo=telegram&logoColor=white" /> | **<a href="https://t.me/devson2561" target="_blank" rel="noopener">@devson2561</a>** |
-
-<sub><b>Open to:</b> truth-infrastructure / AI-safety / cross-vendor consensus collaboration · safety-critical AI consulting · vendor partnerships (embed Mneme inside Cursor / Continue / Cline / Claude Code / Grok CLI) · EU AI Act Article 50 compliance · full-time where the bottleneck is trust, not capability.</sub>
+<sub><b>Open to:</b> truth-infrastructure / AI-safety collaboration · safety-critical AI consulting · vendor partnerships (embed Mneme inside Cursor / Cline / Claude Code / Grok CLI) · full-time where the bottleneck is trust, not capability.</sub>
 
 </div>
 
 ---
 
-## 🔗 Links
-
-📦 <a href="https://www.npmjs.com/package/mneme-ai" target="_blank" rel="noopener">npm</a> · 💻 <a href="https://github.com/patsa2561-art/mneme-ai" target="_blank" rel="noopener">GitHub</a> · 📘 <a href="docs/FUNCTIONS-EN.md" target="_blank" rel="noopener">Functions (EN)</a> · 📗 <a href="docs/FUNCTIONS-TH.md" target="_blank" rel="noopener">ฟังก์ชั่น (ไทย)</a> · 🤖 <a href="docs/AI_AGENT_CONTRACT.md" target="_blank" rel="noopener">AI Agent Contract</a> · 🏛 <a href="docs/ENTERPRISE.md" target="_blank" rel="noopener">Enterprise</a> · 📜 <a href="CHANGELOG.md" target="_blank" rel="noopener">CHANGELOG</a> · 📃 <a href="LICENSE" target="_blank" rel="noopener">MIT</a>
-
 <div align="center">
-<br/>
-<sub>Mneme is the diamond in the dirt nobody saw the value of — cut and polished, it becomes the most valuable diamond in the world. That's the vision.</sub>
-<br/><br/>
-<sub>Made with care for every AI agent that wants to remember + verify + reason together.</sub>
+
+📦 <a href="https://www.npmjs.com/package/mneme-ai">npm</a> · 💻 <a href="https://github.com/patsa2561-art/mneme-ai">GitHub</a> · 📘 <a href="docs/FUNCTIONS-EN.md">Functions (EN)</a> · 📗 <a href="docs/FUNCTIONS-TH.md">ฟังก์ชั่น (ไทย)</a> · 🤖 <a href="docs/AI_AGENT_CONTRACT.md">AI Agent Contract</a> · 🏛 <a href="docs/ENTERPRISE.md">Enterprise</a> · 📜 <a href="CHANGELOG.md">CHANGELOG</a> · 📃 <a href="LICENSE">MIT</a>
+
+<br/><sub>Mneme is the diamond in the dirt nobody saw the value of — cut and polished, it becomes the most valuable diamond in the world.</sub>
+<br/><sub>Made with care for every AI agent that wants to remember + verify + reason together.</sub>
+
 </div>
