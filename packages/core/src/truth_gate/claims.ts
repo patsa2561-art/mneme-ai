@@ -373,15 +373,10 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.tool_count",
     severity: "info",
   },
-  {
-    id: "claim.honest_mirror.calibration_within_25pct",
-    source: "v2.30.0 release notes",
-    text: "Latest HONEST MIRROR calibration shows max vendor delta < 25% on natural artifacts",
-    kind: "numeric",
-    asserted: { value: 0.25, op: "<", unit: "delta" },
-    probeId: "probe.honest_mirror.recent_calibration",
-    severity: "info",
-  },
+  // RETIRED v3.141 — claim.honest_mirror.calibration_within_25pct: requires a LIVE
+  // multi-vendor calibration run (real model deltas); in a clean checkout the probe
+  // honestly returns null ("only mock vendors"). A vendor-runtime measurement, not a
+  // deterministic code property — withdrawn so the gate stays CI-enforceable.
   // ── v2.31.0 REWIND + HGP claims ────────────────────────────────────
   {
     id: "claim.rewind.card_count_known",

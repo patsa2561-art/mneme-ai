@@ -75,12 +75,20 @@ export async function reconcileAll(ctx: ProbeContext): Promise<TruthMatrix> {
         reason = `asserted ${claim.asserted.op} ${claim.asserted.value}${claim.asserted.unit ? " " + claim.asserted.unit : ""}; measured ${probe.value}`;
       }
     } else if (claim.kind === "boolean" && claim.asserted) {
-      if (typeof probe.value !== "boolean") {
+      // A boolean claim's probe may legitimately return 0/1 (numeric) — many
+      // deterministic probes report 1=true / 0=false. Coerce rather than reject
+      // (pre-v3.141 these silently fell through to "unmeasured", hiding real passes).
+      const bv: boolean | null =
+        typeof probe.value === "boolean" ? probe.value
+        : probe.value === 1 ? true
+        : probe.value === 0 ? false
+        : null;
+      if (bv === null) {
         verdict = "unmeasured";
         reason = `probe value is not boolean: ${String(probe.value).slice(0, 100)}`;
       } else {
-        verdict = compareBoolean(claim.asserted, probe.value);
-        reason = `asserted ${claim.asserted.value === 1 ? "true" : "false"}; measured ${probe.value}`;
+        verdict = compareBoolean(claim.asserted, bv);
+        reason = `asserted ${claim.asserted.value === 1 ? "true" : "false"}; measured ${bv}`;
       }
     } else if (claim.kind === "string") {
       // String claims don't enforce a specific value (since the probe

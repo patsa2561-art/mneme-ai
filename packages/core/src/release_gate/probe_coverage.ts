@@ -48,6 +48,20 @@ const COVERAGE_EXEMPT = new Set<string>([
   "mneme.argus.adapters",
   "mneme.argus.hydra",
   "mneme.argus.verify",
+  // v3.141 — read-only informational generators + the autoprobe meta-runner.
+  // These were previously covered transitively by claim.strategy.tier3_complete /
+  // claim.autoprobe.fresh, both retired in v3.140 as runtime/aspirational. The tools
+  // themselves are deterministically read-only (rfc/pricing just PRINT) or are the
+  // empirical-prover itself (a runner can't prove its own invocability) — so they
+  // belong in the exempt escape hatch, not behind a re-introduced false claim.
+  "mneme.strategy.rfc",
+  "mneme.strategy.pricing",
+  "mneme.autoprobe.run",
+  // v3.141 — honest_mirror: calibrate runs a LIVE multi-vendor calibration (no
+  // deterministic in-CI proof; was covered by the retired calibration claim);
+  // artifacts is a read-only lister. Both belong in the exempt hatch.
+  "mneme.honest_mirror.calibrate",
+  "mneme.honest_mirror.artifacts",
 ]);
 
 export interface ProbeCoverageInput {

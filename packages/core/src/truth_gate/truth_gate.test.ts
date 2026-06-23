@@ -1,8 +1,11 @@
 // v2.27.0 — TRUTH GATE unit tests (discrete root tests covering every logic branch).
 
 import { describe, it, expect, beforeEach } from "vitest";
+import { fileURLToPath } from "node:url";
+import { dirname, join } from "node:path";
+import { existsSync } from "node:fs";
 import { CLAIM_CATALOG, ALL_PROBES, probeById } from "./index.js";
-import { verifyMatrix, __resetTruthChainForTest } from "./engine.js";
+import { verifyMatrix, reconcileAll, __resetTruthChainForTest } from "./engine.js";
 import type { TruthMatrix } from "./types.js";
 
 describe("truth_gate — claim catalog", () => {
@@ -82,4 +85,26 @@ describe("truth_gate — verifyMatrix", () => {
   it("rejects a tampered matrix (bad bodyDigest)", () => {
     expect(verifyMatrix(badMatrix()).ok).toBe(false);
   });
+});
+
+// ── v3.141 THE HONESTY CONTRACT ──────────────────────────────────────
+// The gap that let v3.140 ship a "drift 0" headline that was actually 1:
+// NOTHING ran reconcileAll against the real repo with the SAME {cwd} ctx the
+// CLI/MCP use. This block is that guard — and the seed of the CI honesty-gate.
+// The contract is drift===0 && refuted===0 (no FALSE public claim). "unmeasured"
+// is honest (a runtime artifact may be absent in a fresh checkout) and is NOT
+// enforced here — only that the gate never STAMPS something the evidence denies.
+describe("truth_gate — THE HONESTY CONTRACT (real-repo reconcile)", () => {
+  beforeEach(() => __resetTruthChainForTest());
+  const repoRoot = join(dirname(fileURLToPath(import.meta.url)), "..", "..", "..", "..");
+  const runnable = existsSync(join(repoRoot, "packages", "cli", "package.json"));
+
+  it("★ the real repo has ZERO drift and ZERO refuted claims (else a public claim is lying)", async () => {
+    if (!runnable) return; // detached/partial checkout — gate runs in the monorepo
+    const m = await reconcileAll({ cwd: repoRoot });
+    const id = (e: { claim: { id: string } }) => e.claim.id;
+    expect(m.entries.filter((e) => e.verdict === "drift").map(id), "DRIFTED claims — fix or retire").toEqual([]);
+    expect(m.entries.filter((e) => e.verdict === "refuted").map(id), "REFUTED claims — the evidence denies these").toEqual([]);
+    expect(m.trafficLight).toBe("green");
+  }, 120_000);
 });
