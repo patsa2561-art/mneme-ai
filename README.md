@@ -64,6 +64,8 @@ Each is a runnable command + a deterministic test (`gauntlet=100`) + a signed, o
 |--|--|--|--|
 | 🌌 | **Singularity Search** | Find the right tool among **900+ from one sentence** (EN/Thai) — so no capability is ever invisible to an agent. *top-3 ≥98.5%* | <a href="docs/FUNCTIONS-EN.md">→</a> |
 | 🧠 | **Hallucination Protection** | The **last gate before an agent answers** — a mesh of nerves reflex-blocks any hard fault, abstains when unsure. *precision-when-TRUSTED = 1.0* | <a href="CHANGELOG.md">→</a> |
+| 🛡 | **Agent Security Posture** | Grade an agent's whole safety surface in one **signed A–F report**: MUTAGEN derives novel attack variants vs its guardrail · ESCALON finds tool-chain **privilege-escalation** paths + poisoned tools. *postureGauntlet=100* | <a href="CHANGELOG.md">→</a> |
+| 📜 | **Public Honesty Ledger** | Every public claim binds to a probe; **CI fails the build if one drifts**. A signed ledger anyone verifies offline — the badge **can't be faked green**. *zero-drift* | <a href="docs/HONESTY-LEDGER.md">→</a> |
 | 🎗️ | **Verified-by-Mneme** | A signed **trust certificate for AI-worker output** — never certifies a deliverable with a known fault. *CERTIFIED-precision 1.0* | <a href="docs/VERICERT.md">→</a> |
 | 🛂 | **The Context Passport** | **Cross-agent verified context** that lives in git — what one agent learns, the next inherits; poison is screened out. *TRUST-precision 1.0* | <a href="docs/CONTEXT_PASSPORT.md">→</a> |
 | 🚢 | **The Ark** | **Accountable AI reproduction** — a child agent inherits values + scars + verified context and can only NARROW authority. *a malicious birth is never approved* | <a href="docs/ARK.md">→</a> |
