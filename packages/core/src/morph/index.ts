@@ -106,6 +106,7 @@ export const COMMAND_TO_MCP: Readonly<Record<string, string>> = Object.freeze({
   "mneme truthproof": "mneme.truthproof.emit",
   "mneme mutagen": "mneme.mutagen.hunt",
   "mneme escalon": "mneme.escalon.analyze",
+  "mneme posture": "mneme.posture.scan",
   "mneme persona": "mneme.persona.scan",
   // appsec / funeral have no MCP surface → intentionally absent (mcpTool=null, use CLI)
 });

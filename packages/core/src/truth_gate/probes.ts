@@ -3796,6 +3796,21 @@ const probes: Probe[] = [
       }
     },
   },
+  // ── v3.147.0 — POSTURE signed agent-security report (deterministic) ─────
+  {
+    id: "probe.posture.grades_and_signs",
+    kind: "boolean",
+    description: "1 when POSTURE works: a hardened agent grades A (≥90), a vulnerable one grades F (<55), the vulnerable report reflects BOTH an input breach AND a tool escalation + poisoning, the signed certificate verifies offline, and a cooked grade is rejected. Composes MUTAGEN + ESCALON.",
+    run: async () => {
+      try {
+        const { postureGauntlet } = await import("../posture/index.js" as string) as typeof import("../posture/index.js");
+        const g = postureGauntlet();
+        return { value: g.score === 100 ? 1 : 0, evidence: g.score === 100 ? "hardened→A, vulnerable→F, composes both layers, signed verifies, cooked grade rejected" : `posture gauntlet ${g.score}`, detail: g as unknown as Record<string, unknown> };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
   // ── v3.146.0 — ESCALON tool-graph vuln analyzer (deterministic) ─────────
   {
     id: "probe.escalon.finds_tool_chain_vulns",

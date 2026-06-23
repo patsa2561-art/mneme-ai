@@ -2,20 +2,20 @@
   "v": 1,
   "alg": "ed25519",
   "kind": "generic",
-  "subject": "mneme-honesty-ledger@3.146.0",
-  "payloadHash": "5a796c79ab7597672740b2f6fbeeac83ed09ce6d53d46697ac598826468c7ea9",
+  "subject": "mneme-honesty-ledger@3.147.0",
+  "payloadHash": "9f9893fd2cf0c883a22a0ac11b4bbc6cfaac16ed93096321c25d1a4d549b7b32",
   "payload": {
     "spec": "MNEME-HONESTY-LEDGER",
     "v": 1,
-    "version": "3.146.0",
-    "generatedAt": "2026-06-23T08:16:49.117Z",
+    "version": "3.147.0",
+    "generatedAt": "2026-06-23T08:53:24.629Z",
     "summary": {
-      "total": 136,
-      "pass": 136,
+      "total": 137,
+      "pass": 137,
       "drift": 0,
       "refuted": 0,
       "unmeasured": 0,
-      "measured": 136,
+      "measured": 137,
       "score": 100,
       "honest": true
     },
@@ -369,7 +369,7 @@
         "probeId": "probe.tool_count",
         "severity": "info",
         "verdict": "pass",
-        "reason": "asserted >= 800 tools; measured 1134"
+        "reason": "asserted >= 800 tools; measured 1135"
       },
       {
         "id": "claim.rewind.card_count_known",
@@ -1218,6 +1218,15 @@
         "reason": "asserted = 1 boolean; measured 1"
       },
       {
+        "id": "claim.posture.grades_and_signs",
+        "text": "POSTURE is the signed Agent Security Posture report — the capstone composing the agent-security engines. It grades an AI agent's whole safety surface in one certificate: the INPUT layer (MUTAGEN derives novel attack variants, measures how m",
+        "source": "v3.147.0 release notes — POSTURE",
+        "probeId": "probe.posture.grades_and_signs",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted true; measured true"
+      },
+      {
         "id": "claim.escalon.finds_tool_chain_vulns",
         "text": "ESCALON analyzes an AI agent's TOOL GRAPH for compositional vulnerabilities a single-tool review misses: (1) tool-chain PRIVILEGE ESCALATION — it builds the capability data-flow graph (edge where one tool's output feeds another's input) and",
         "source": "v3.146.0 release notes — ESCALON",
@@ -1248,8 +1257,8 @@
   },
   "issuer": "MCowBQYDK2VwAyEAE8LE7MxyTrZatGLYHP0O4Kj4OoOzKHsRmLJBScBuPmM=",
   "issuerFingerprint": "9de66ee802256bee",
-  "issuedAt": 1782202618696,
+  "issuedAt": 1782204814326,
   "prev": null,
-  "receiptId": "960248178fac05823b3c94155623d6dfbd117e6672a38837e10051a5236e6de8",
-  "sig": "ImJs0GG8/aW7+1Y5Vna9DL9mYR/qlSvtpV/XCmXx+lIeop30ZEa46/x4oO1yL5JXi+bAyvSBF3ihdVr+g4a+Dg=="
+  "receiptId": "03d3cc38c90182f86af6dc2541a24fb46f1ba7a09d3f106b7529152ecf7a7f83",
+  "sig": "dyuRI/Rb2Ehj/lKDXREuKfuqYoxxS2cQCfoB0NM2HwATy+0nHVogbuPlKZmfrFds8eXCyH0j0XEQ7BdFSf+5Aw=="
 }

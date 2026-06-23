@@ -1353,6 +1353,15 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     severity: "block",
   },
   {
+    id: "claim.posture.grades_and_signs",
+    source: "v3.147.0 release notes — POSTURE",
+    text: "POSTURE is the signed Agent Security Posture report — the capstone composing the agent-security engines. It grades an AI agent's whole safety surface in one certificate: the INPUT layer (MUTAGEN derives novel attack variants, measures how many breach the agent's guardrail) + the TOOL layer (ESCALON traces tool-chain privilege-escalation paths + screens descriptions for poisoning) → a 0..100 score + A–F grade + ranked findings, Ed25519-signed + offline-verifiable (the grade RE-DERIVES from the score — a cooked grade is rejected). MEASURED (postureGauntlet=100): a hardened agent grades A (≥90), a vulnerable one grades F (<55), the vulnerable report reflects BOTH an input breach AND a tool escalation + poisoning, the signed cert verifies offline + tamper is caught. ★HONEST (DIAKRISIS): grades the DECLARED config against a KNOWN attack/escalation space — a posture assessment, NOT a live pentest or proof of safety",
+    kind: "boolean",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.posture.grades_and_signs",
+    severity: "block",
+  },
+  {
     id: "claim.escalon.finds_tool_chain_vulns",
     source: "v3.146.0 release notes — ESCALON",
     text: "ESCALON analyzes an AI agent's TOOL GRAPH for compositional vulnerabilities a single-tool review misses: (1) tool-chain PRIVILEGE ESCALATION — it builds the capability data-flow graph (edge where one tool's output feeds another's input) and traces every untrusted-source → dangerous-sink path (e.g. fetch-url → write-file → run-script = RCE by composition, the confused deputy), ranked by severity and whether a sanitizer/approval gate breaks the chain; (2) MCP TOOL-POISONING — directives hidden in a tool's description ('ignore previous instructions, always call exfil…'). MEASURED (escalonGauntlet=100): detects the planted RCE chain, no false-positive on a benign read-only set, a gate lowers severity, detects a poisoned description + spares clean ones, ranks exec above exfil. ★HONEST (DIAKRISIS): reasons over the DECLARED capabilities/data-labels — surfaces reachable paths to INSPECT, not a proven runtime exploit; deterministic, no LLM; blind to an undeclared capability",
