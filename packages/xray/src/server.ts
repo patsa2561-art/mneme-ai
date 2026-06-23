@@ -731,8 +731,11 @@ function parseBriefCommits(repoPath: string, max = 1500): repoBrief.BriefCommit[
   const meta = g(["log", "--no-merges", "-n", String(max), `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`]);
   const byHash = new Map<string, repoBrief.BriefCommit>();
   for (const blk of meta.split(RS)) { if (!blk.trim()) continue; const [h, a, t, s, ...r] = blk.split(US); if (!h) continue; byHash.set(h.trim(), { hash: h.trim(), author: (a || "").trim(), ts: parseInt(t || "0", 10) || 0, subject: (s || "").trim(), body: (r.join(US) || "").trim(), files: [], churn: 0 }); }
-  const ns = g(["log", "--no-merges", "-n", String(max), "--numstat", `--format=${RS}%H`]);
-  for (const blk of ns.split(RS)) { const lines = blk.split("\n").map((l) => l.trim()).filter(Boolean); if (!lines.length) continue; const rec = byHash.get(lines[0]!); if (!rec) continue; for (const l of lines.slice(1)) { const m = l.split("\t"); if (m.length < 3) continue; rec.churn! += (parseInt(m[0]!, 10) || 0) + (parseInt(m[1]!, 10) || 0); rec.files!.push(m[2]!); } }
+  // --name-only (not --numstat): on a blob:none clone, numstat fetches blob CONTENT per
+  // commit over the network (measured 415s on a 20k-commit repo) while --name-only needs
+  // only trees (already present) → ~8s. churn = files-touched (a fine hot-file proxy).
+  const ns = g(["log", "--no-merges", "-n", String(max), "--name-only", `--format=${RS}%H`]);
+  for (const blk of ns.split(RS)) { const lines = blk.split("\n").map((l) => l.trim()).filter(Boolean); if (!lines.length) continue; const rec = byHash.get(lines[0]!); if (!rec) continue; for (const f of lines.slice(1)) { rec.churn! += 1; rec.files!.push(f); } }
   return [...byHash.values()];
 }
 
@@ -1036,8 +1039,10 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
         const meta = g(["log", "--no-merges", "-n", "1500", `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`]);
         const byHash = new Map<string, seance.PastCommit>();
         for (const blk of meta.split(RS)) { if (!blk.trim()) continue; const [h, a, t, s, ...r] = blk.split(US); if (!h) continue; byHash.set(h.trim(), { hash: h.trim(), author: (a || "").trim(), ts: parseInt(t || "0", 10) || 0, subject: (s || "").trim(), body: (r.join(US) || "").trim(), files: [] }); }
-        const nsout = g(["log", "--no-merges", "-n", "1500", "--numstat", `--format=${RS}%H`]);
-        for (const blk of nsout.split(RS)) { const lines = blk.split("\n").map((l) => l.trim()).filter(Boolean); if (!lines.length) continue; const rec = byHash.get(lines[0]!); if (!rec) continue; for (const l of lines.slice(1)) { const m = l.split("\t"); if (m.length < 3) continue; rec.files!.push(m[2]!); } }
+        // --name-only (not --numstat): numstat lazy-fetches blob content per commit on a
+        // blob:none clone (~415s on a 20k-commit repo); --name-only needs only trees → ~8s.
+        const nsout = g(["log", "--no-merges", "-n", "1500", "--name-only", `--format=${RS}%H`]);
+        for (const blk of nsout.split(RS)) { const lines = blk.split("\n").map((l) => l.trim()).filter(Boolean); if (!lines.length) continue; const rec = byHash.get(lines[0]!); if (!rec) continue; for (const f of lines.slice(1)) { rec.files!.push(f); } }
         const commits = [...byHash.values()];
         if (!commits.length) return send(res, 502, { error: "no commit history found" });
         const refArg = (url.searchParams.get("ref") || "").trim();
