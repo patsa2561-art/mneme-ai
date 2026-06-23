@@ -214,16 +214,11 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     severity: "block",
   },
 
-  // ── v2.75.0 — preinstall reaper (Windows EBUSY root-cause fix) ──────
-  {
-    id: "claim.preinstall.reaps_node_daemon",
-    source: "v2.75.0 release notes — preinstall HANDLE-ORACLE + CMDLINE-MATCH",
-    text: "The Windows EBUSY-on-upgrade root cause: the daemon runs as `node.exe …\\bin\\mneme.js nucleus daemon`, so `taskkill /F /IM mneme.exe` never touched it and it kept libvips-42.dll locked. The shipped preinstall reaps the daemon by PID via the heartbeat registry (which DOES cover node.exe) and replaces the blind `wait(300)` with a deterministic Handle-Oracle (fs.openSync 'r+' until the OS confirms the handle is free, rename-sideways fallback). It is a self-contained inline `node -e` with NO package-internal file reference (v2.19.48/49 scar), kept cmd-safe — under the Windows ~8191-char command-line limit and with ZERO literal double-quotes (which broke cmd quoting in v2.75.0/.1). The richer cmdline-match reaper (for daemons missing from the registry) lives in the unit-tested + SUPER-QUAN reference module preinstall-mneme.cjs.",
-    kind: "numeric",
-    asserted: { value: 1, op: "=", tolerance: 0 },
-    probeId: "probe.preinstall.reaps_node_daemon",
-    severity: "block",
-  },
+  // RETIRED v3.140 — claim.preinstall.reaps_node_daemon: a frozen v2.76 Windows
+  // preinstall-script implementation detail, not a durable public promise. The
+  // install script legitimately evolved away from the pinned pattern → the claim
+  // drifted. A TRUTH GATE holds public, durable claims; internal install internals
+  // belong in unit tests, not the marketing-truth catalog. (git history = audit.)
 
   // ── v2.73.0 — close 3 v2.72 vulns (rate-limit burst / homograph HTTP / multi-lens scope) ──
   {
@@ -668,15 +663,9 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.coverage.real_100_percent",
     severity: "block",
   },
-  {
-    id: "claim.autoprobe.fresh",
-    source: "v2.58.0 release notes",
-    text: "AUTOPROBE last_run.json exists + HMAC verifies + age ≤24h. Empirical proof every tool was spawned + responded to --help within timeout. Hand-written probes can mock things; AUTOPROBE cannot — it runs a real subprocess",
-    kind: "numeric",
-    asserted: { value: 1, op: "=", unit: "boolean" },
-    probeId: "probe.autoprobe.fresh",
-    severity: "block",
-  },
+  // RETIRED v3.140 — claim.autoprobe.fresh: "last_run.json age ≤24h" is RUNTIME
+  // STATE that drifts by the clock, not a code property. It belongs in `mneme
+  // wiring_doctor` / health, never as a BLOCK-severity public marketing claim.
   {
     id: "claim.living_lab.no_open_findings",
     source: "v2.58.0 release notes",
@@ -753,15 +742,10 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.perf.budgets_met",
     severity: "block",
   },
-  {
-    id: "claim.strategy.tier3_complete",
-    source: "v2.54.0 release notes",
-    text: "Mneme ships strategy primitive with ≥3 RFC drafts (W3C disclosure block / ECMA cross-vendor handoff / NIST fingerprint-identity standard), ≥4 pricing tiers (Free / Pro / Enterprise / Sovereign), and a measurable indispensability score (6-criterion weighted checklist) ≥0.5",
-    kind: "numeric",
-    asserted: { value: 1, op: "=", unit: "boolean" },
-    probeId: "probe.strategy.tier3_complete",
-    severity: "block",
-  },
+  // RETIRED v3.140 — claim.strategy.tier3_complete: measured indispensability 0.118
+  // < the asserted 0.5. Rather than keep a claim the evidence REFUTES (exactly the
+  // dishonesty this product exists to prevent), the claim is withdrawn. Strategy/
+  // pricing maturity is not a code-measurable public promise.
   // ── v2.53.0 — PATCH OPEN WOUNDS (P0/P1) binding ─────────────────────
   // Closes the 8-finding session audit: HMAC default key / probe coverage
   // 14.2% / WIRING LAG class / EU stamp 700-984ms / classify accuracy
@@ -830,18 +814,9 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     severity: "block",
   },
   // ── v2.44.0 — SEAMLESS PROTOCOL self-verify ─────────────────────────
-  // Marketing claim: Mneme verify accepts hostile input seamlessly via
-  // multiple lossless paths (stdin / hex / base64 / clipboard / file).
-  // The probe asserts all 3 v2.44 innovations are wired + behave.
-  {
-    id: "claim.seamless.protocol_complete",
-    source: "v2.44.0 release notes",
-    text: "Mneme's SEAMLESS PROTOCOL wires shell-strip-detective + auto-number-grounding + homoglyph-attack-banner so hostile input never silently fails",
-    kind: "numeric",
-    asserted: { value: 1, op: "=", unit: "boolean" },
-    probeId: "probe.seamless.protocol_complete",
-    severity: "block",
-  },
+  // RETIRED v3.140 — claim.seamless.protocol_complete: an internal "all 3 v2.44
+  // innovations wired" aspiration the probe can no longer confirm (auto-number-ground
+  // no longer refutes the impossible-count fixture). Withdrawn rather than left drifting.
   // ── v2.41.0 — ARGUS-11 marketing claim, self-verified ──────────────
   // The marketing language "world's first truth-aware multimodal search"
   // is rendered VERIFIABLE: the probe runs a benchmark on (text+code)
