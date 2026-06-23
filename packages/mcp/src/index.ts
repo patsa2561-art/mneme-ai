@@ -70,6 +70,7 @@ export { buildAllTools, buildToolMap, groupByCategory } from "./tools/_registry.
  */
 export const LEAN_TOOL_NAMES: readonly string[] = [
   "mneme.morph",            // the polymorphic front door → resolves intent to the right tool
+  "mneme.discover",         // 🌌 the Singularity search — find the right tool among 900+ from one sentence
   "mneme.protect.scan",     // the LAST gate before answering — hallucination protection engine
   "mneme.boot",             // the activation table (when→tool)
   "mneme.gateway.route",    // intent → ranked tool candidates (fallback)

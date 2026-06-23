@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.discover.singularity_tool_search",
+    kind: "boolean",
+    description: "THE SINGULARITY SEARCH (v3.139.0 — the parallel tool-discovery engine that makes Mneme's 900+ tools findable by any agent from one sentence). Compresses the catalog to an inverted index; a free-text query examines only the candidate pocket (sub-scan) and ranks by trigger-coverage + IDF summary overlap. This probe asserts discoverGauntlet=100: ★top-3 accuracy ≥0.985 on a labeled EN+Thai corpus (the right tool is in the shortlist) ∧ top-1 strong (≥0.8) ∧ ★sub-scan (examines a candidate pocket, not all tools) ∧ bilingual (a Thai no-space query resolves via substring) ∧ confidence calibrated (clear query high, empty low) ∧ deterministic ∧ total. Exposed as mneme.discover in the LEAN set so every agent sees it. HONEST (DIAKRISIS): 100% top-1 NL routing is impossible — the guarantee is top-3 + a usable confidence; classical IR (inverted index + IDF + trigger coverage), not magic.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const D = await import("../discover/index.js" as string) as typeof import("../discover/index.js");
+        const g = D.discoverGauntlet(); const b = D.discoverBench();
+        const ok = g.score === 100 && g.top3AtLeast985 && g.subScan && g.bilingual && g.confidenceCalibrated && g.deterministic && g.total && b.top3 >= 0.985;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} top1=${b.top1} top3=${b.top3} touched=${b.avgTouchedRatio} subScan=${b.subScan} bilingual=${g.bilingual}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.cosmos.singularity_and_gravity",
     kind: "boolean",
     description: "COSMOS (v3.138.0 — the cosmo-quantum memory core, made classically real; quantum-INSPIRED, NOT quantum compute). Two engines: the SINGULARITY CODEC (compress context into a dense seed → inflate only the problem-shaped pocket) and ENTANGLED-GRAVITY retrieval (memories entangled by shared entities → a query pulled toward the densest relevant cluster, visiting fewer nodes). This probe asserts cosmosGauntlet=100: compresses (dedup, seed < source) ∧ ★inflate-precision = 1.0 (never inflates a distractor — generic low-IDF links filtered, 0 leaks, measured) ∧ inflate recall ≥0.9 ∧ ★inflate sub-scan (examines < the whole seed) ∧ ★inflate accuracy ≥0.985 ∧ ★gravity matches a brute-force full scan ≥0.985 top-k ∧ ★gravity sub-scan (visits < total nodes) ∧ deterministic ∧ total. HONEST (DIAKRISIS): classical math (IDF relevance + a mass-weighted graph pull), not quantum hardware and not precognition — a real compress/expand + gravity-retrieval memory engine.",

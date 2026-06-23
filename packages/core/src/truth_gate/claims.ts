@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.139.0 — THE SINGULARITY SEARCH: parallel tool-discovery for agents ──
+  {
+    id: "claim.discover.singularity_tool_search",
+    source: "v3.139.0 release notes",
+    text: "Mneme's SINGULARITY SEARCH solves the load-bearing adoption problem: 900+ tools are worthless if an AI agent doesn't know a capability exists or can't pick the right one mid-chat. It compresses the whole catalog into an inverted index (the 'singularity'); a free-text query (English or Thai) examines only the candidate pocket — caps sharing a query word or whose trigger phrase is contained in the sentence (sub-scan, not a scan of all 900) — and ranks them by trigger-coverage (a query matching a tool's trigger phrase is a near-exact signal) plus IDF-weighted summary overlap, returning the best tools with WHY each matched, how to call it, and a confidence. It is exposed as mneme.discover and added to the LEAN tool set, so EVERY agent always sees it and can find any tool — including the newest — from one sentence. discoverGauntlet=100 with measured top-3 accuracy ≥0.985 (top-1 = 1.0, sub-scan touched ≈0.18) on a labeled EN+Thai corpus. CLI/morph: 'mneme discover'/'mneme find'; MCP mneme.discover (Matrix gRPC auto). probe.discover.singularity_tool_search. HONEST (DIAKRISIS): 100% top-1 NL routing is impossible — the guarantee is top-3 (the agent picks from a tiny shortlist) plus a usable confidence to clarify on ambiguity; classical IR (inverted index + IDF + trigger coverage), not magic. The complement to mneme.morph (which routes the curated high-value set) — discover searches the full catalog.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.discover.singularity_tool_search",
+    severity: "block",
+  },
   // ── v3.138.0 — COSMOS: the cosmo-quantum memory core (classically real) ──
   {
     id: "claim.cosmos.singularity_and_gravity",
