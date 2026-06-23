@@ -2,8 +2,8 @@
 
 > Every claim below passed `mneme launch` (VERICERT) — defensible, no overclaim, no
 > fabricated number. Lead with the one thing a reader can try in 10 seconds.
-> **Replace `<MARKETPLACE_URL>`** with the exact URL on your listing page
-> (likely `https://github.com/marketplace/actions/mneme-pr-context-checks`).
+> **Replace `https://github.com/marketplace/actions/mneme-pr-context-checks`** with the exact URL on your listing page
+> 
 
 ---
 
@@ -36,7 +36,7 @@ Try the web tools free, no install — paste any public repo:
 • https://xray.mneme-ai.space/persona  (each contributor's commit style)
 
 Add the PR bot to a repo in one line: uses: patsa2561-art/mneme-ai@v3
-(GitHub Marketplace: <MARKETPLACE_URL>)
+(GitHub Marketplace: https://github.com/marketplace/actions/mneme-pr-context-checks)
 
 It's MIT, local-first, vendor-neutral (an MCP server + a CLI). Honest about limits:
 it surfaces context and checks known issues — it does NOT judge skill, and "no known
@@ -68,7 +68,7 @@ git. No LLM in the analysis. Nothing leaves your CI. 🧵
 → https://xray.mneme-ai.space
 
 4/ Add the PR bot in one line: uses: patsa2561-art/mneme-ai@v3
-GitHub Marketplace → <MARKETPLACE_URL>
+GitHub Marketplace → https://github.com/marketplace/actions/mneme-pr-context-checks
 
 5/ MIT · local-first · vendor-neutral (MCP + CLI). Honest: it surfaces context + checks
 known issues — not skill, not a proof of correctness. Code never leaves your runner.
@@ -97,7 +97,7 @@ analysis path, nothing leaves CI):
 
 No install to try — paste a public repo at https://xray.mneme-ai.space (/brief,
 /seance, /persona). Add the bot in one line: uses: patsa2561-art/mneme-ai@v3
-(Marketplace: <MARKETPLACE_URL>).
+(Marketplace: https://github.com/marketplace/actions/mneme-pr-context-checks).
 
 MIT, local-first, MCP + CLI. Honest about limits (hygiene ≠ skill; "no known fault" ≠
 proof). Curious what context you'd want surfaced on a PR.
@@ -106,7 +106,7 @@ proof). Curious what context you'd want surfaced on a PR.
 ---
 
 ## What I (the author) do — the manual steps
-1. Confirm the exact Marketplace URL on the listing page; paste it where `<MARKETPLACE_URL>` is.
+1. Confirm the exact Marketplace URL on the listing page; paste it where `https://github.com/marketplace/actions/mneme-pr-context-checks` is.
 2. Post the HN "Show HN" (best Tue–Thu morning US time), then the X thread, then Reddit.
 3. Reply to early comments fast — that's what moves a Show HN.
 4. (Optional) move the `v3` tag on each future release so `@v3` users get the latest.
