@@ -597,6 +597,20 @@ const probes: Probe[] = [
     },
   },
   {
+    id: "probe.ark.accountable_reproduction",
+    kind: "boolean",
+    description: "THE ARK (v3.136.0 — the accountable AI-reproduction & inheritance protocol; the capstone fusing trust + inherited context + scars + reproduction). A parent agent mints a signed AgentGenome; a child BORN from it inherits the covenant (values), capability bounds, scar ledger, and verified context — and authority only NARROWS. This probe asserts arkGauntlet=100: approves a valid birth ∧ ★blocks privilege escalation (a child can never gain authority a parent lacked) ∧ blocks covenant regression ∧ ★blocks scar amnesia (an ancestor's fatal mistake can never be forgotten) ∧ ★blocks poisoned inheritance (poison context can't be inherited) ∧ tamper-evident genomeId ∧ a clean bloodline verifies end-to-end ∧ ★approve-precision = 1.0 (NEVER approves a malicious birth, 0 leaks, measured on a labeled corpus) ∧ ★birth-validity accuracy ≥0.985 ∧ the runtime action-gate denies bounded/scarred actions ∧ deterministic ∧ total. HONEST (DIAKRISIS): enforces STRUCTURAL guarantees (monotone authority, carried scars, screened context, tamper-evidence) — it does not make a child 'good', it makes every generation accountable + bounded + remembering.",
+    run: async (ctx) => {
+      const t0 = Date.now(); void ctx;
+      try {
+        const A = await import("../ark/index.js" as string) as typeof import("../ark/index.js");
+        const g = A.arkGauntlet(); const b = A.arkBench();
+        const ok = g.score === 100 && g.approvePrecisionPerfect && g.accuracyAtLeast985 && g.blocksPrivilegeEscalation && g.blocksScarAmnesia && g.blocksPoisonInheritance && g.tamperEvident && g.lineageVerifies && g.deterministic && g.total && b.approvePrecision === 1 && b.leaks.length === 0 && b.accuracy >= 0.985;
+        return { value: ok ? 1 : 0, evidence: `score=${g.score} accuracy=${b.accuracy} approvePrecision=${b.approvePrecision} leaks=${b.leaks.length} escalation=${g.blocksPrivilegeEscalation} scar=${g.blocksScarAmnesia} poison=${g.blocksPoisonInheritance}`, dtMs: Date.now() - t0 };
+      } catch (e) { return { value: 0, evidence: `threw: ${(e as Error).message}`, dtMs: Date.now() - t0 }; }
+    },
+  },
+  {
     id: "probe.pr_engine.launch_copy_cannot_lie",
     kind: "boolean",
     description: "THE PR ENGINE (v3.135.0 — launch/PR copy that can't lie). Generates a launch kit (HN/X/Reddit/changelog) where every candidate claim is VERICERT-screened first; overclaims, fabrications, and unfalsifiable marketing superlatives are rejected and never ship. This probe asserts prEngineGauntlet=100: rejects an overclaim ('world's best, 100% accurate, never fails') ∧ approves a calm measured claim ∧ ★zero-overclaim output (the assembled kit re-certifies clean — no REJECTED sentence survives) ∧ a rejected claim never appears in the copy ∧ all channels built ∧ deterministic ∧ total. HONEST (DIAKRISIS): screens KNOWN overclaim patterns + drops unfalsifiable superlatives — it keeps copy defensible, it does not make a claim true.",

@@ -984,6 +984,16 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     probeId: "probe.gateway.intent_routing",
     severity: "block",
   },
+  // ── v3.136.0 — THE ARK: accountable AI-reproduction & inheritance protocol ──
+  {
+    id: "claim.ark.accountable_reproduction",
+    source: "v3.136.0 release notes",
+    text: "Mneme's ARK is the accountable AI-reproduction & inheritance protocol — the capstone that fuses the four genetic pillars (trust substrate · inherited verified context · scar ledger · reproduction) into how an agent SAFELY gives birth to a child agent, so a network of agents grows WITHOUT runaway, unaccountable reproduction. A parent mints a signed AgentGenome; a child born from it inherits the covenant (values that may only grow), the capability bounds (a DENY-list that only grows → authority MONOTONICALLY NARROWS, a child can only ever have LESS authority than its parent), the scar ledger (forbidden actions / dead-ends carried forward forever — a descendant can never repeat an ancestor's fatal mistake), and verified cross-agent context (poisoned entries can never be inherited — they fail the Context-Passport screen). Every genome is tamper-evident (genomeId) + Ed25519-signed, and a whole bloodline verifies offline. arkGauntlet=100 and the security-grade measured guarantee is approve-precision = 1.0: a malicious birth (privilege escalation, covenant regression, scar amnesia, poisoned inheritance, tampered, forged lineage) is NEVER approved (0 leaks), with birth-validity accuracy ≥0.985 on a labeled corpus; plus a runtime action-gate (a bounded/scarred action is denied). CLI `mneme ark mint`/`birth`/`verify`/`gate`; MCP `mneme.ark.birth`/`mneme.ark.verify` (self-signing, Matrix gRPC auto); reachable via mneme.morph. probe.ark.accountable_reproduction. HONEST (DIAKRISIS): it enforces STRUCTURAL guarantees (monotone authority, carried scars, screened context, tamper-evidence) — it does not make a child 'good'; it makes every generation accountable, bounded, and remembering.",
+    kind: "numeric",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.ark.accountable_reproduction",
+    severity: "block",
+  },
   // ── v3.135.0 — THE PR ENGINE: launch/PR copy that can't lie ──
   {
     id: "claim.pr_engine.launch_copy_cannot_lie",
