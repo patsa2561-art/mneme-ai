@@ -3796,6 +3796,21 @@ const probes: Probe[] = [
       }
     },
   },
+  // ── v3.148.0 — COMPARE head-to-head vs baseline (deterministic) ─────────
+  {
+    id: "probe.compare.beats_baseline",
+    kind: "boolean",
+    description: "1 when the measured head-to-head holds: Mneme beats a typical baseline approach on every axis (obfuscated-attack defense, tool-chain escalation detection, claim verifiability), computed live from the real engines. Deterministic.",
+    run: async () => {
+      try {
+        const { compareGauntlet } = await import("../compare/index.js" as string) as typeof import("../compare/index.js");
+        const g = compareGauntlet();
+        return { value: g.score === 100 ? 1 : 0, evidence: g.score === 100 ? "Mneme wins obfuscated-defense + tool-escalation + verifiability vs baseline" : `compare gauntlet ${g.score}`, detail: g as unknown as Record<string, unknown> };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
   // ── v3.147.0 — POSTURE signed agent-security report (deterministic) ─────
   {
     id: "probe.posture.grades_and_signs",

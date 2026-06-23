@@ -603,7 +603,7 @@ function certifyLandingHtml(): string {
 function parseCommitsFromGit(repoPath: string, max = 600): commitPersona.CommitRec[] {
   const US = "\x1f", RS = "\x1e";
   // pass 1 — metadata (hash, author, ts, subject, body); body has no RS/US so it's safe
-  const meta = gitSpawn("git", ["-C", repoPath, "log", "--no-merges", "-n", String(max), `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`], { encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
+  const meta = gitSpawn("git", ["-C", repoPath, "log", "--no-merges", "-n", String(max), `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`], { encoding: "utf8", timeout: 60000, maxBuffer: 64 * 1024 * 1024 });
   if (meta.status !== 0 || !meta.stdout) return [];
   const byHash = new Map<string, commitPersona.CommitRec>();
   for (const blk of meta.stdout.split(RS)) {
@@ -613,7 +613,7 @@ function parseCommitsFromGit(repoPath: string, max = 600): commitPersona.CommitR
     byHash.set(hash.trim(), { author: (author || "unknown").trim(), ts: parseInt(at || "0", 10) || 0, subject: (subject || "").trim(), body: (rest.join(US) || "").trim(), files: [], insertions: 0, deletions: 0 });
   }
   // pass 2 — numstat per commit, joined by hash
-  const ns = gitSpawn("git", ["-C", repoPath, "log", "--no-merges", "-n", String(max), "--numstat", `--format=${RS}%H`], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+  const ns = gitSpawn("git", ["-C", repoPath, "log", "--no-merges", "-n", String(max), "--numstat", `--format=${RS}%H`], { encoding: "utf8", timeout: 60000, maxBuffer: 128 * 1024 * 1024 });
   if (ns.status === 0 && ns.stdout) {
     for (const blk of ns.stdout.split(RS)) {
       const lines = blk.split("\n").map((l) => l.trim()).filter(Boolean);
@@ -727,7 +727,7 @@ function seanceLandingHtml(): string {
 // ─── 🧭 REPO BRIEF — the Context Capsule (Path-A moat) ───────────────────────
 function parseBriefCommits(repoPath: string, max = 5000): repoBrief.BriefCommit[] {
   const US = "\x1f", RS = "\x1e";
-  const g = (args: string[]) => { const r = gitSpawn("git", ["-C", repoPath, ...args], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 }); return r.status === 0 ? (r.stdout || "") : ""; };
+  const g = (args: string[]) => { const r = gitSpawn("git", ["-C", repoPath, ...args], { encoding: "utf8", timeout: 60000, maxBuffer: 128 * 1024 * 1024 }); return r.status === 0 ? (r.stdout || "") : ""; };
   const meta = g(["log", "--no-merges", "-n", String(max), `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`]);
   const byHash = new Map<string, repoBrief.BriefCommit>();
   for (const blk of meta.split(RS)) { if (!blk.trim()) continue; const [h, a, t, s, ...r] = blk.split(US); if (!h) continue; byHash.set(h.trim(), { hash: h.trim(), author: (a || "").trim(), ts: parseInt(t || "0", 10) || 0, subject: (s || "").trim(), body: (r.join(US) || "").trim(), files: [], churn: 0 }); }
@@ -972,7 +972,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
         handle = shallowClone(gitUrl);
         const commits = parseBriefCommits(handle.path, 5000);
         if (!commits.length) return send(res, 502, { error: "no commit history found" });
-        const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8" }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
+        const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8", timeout: 60000 }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
         const repoCommits = parseInt(g(["rev-list", "--count", "HEAD"]), 10) || commits.length;
         const grep = g(["grep", "-nI", "-E", "TODO|FIXME|HACK|XXX", "HEAD", "--", "*.ts", "*.tsx", "*.js", "*.py", "*.go", "*.rs"]);
         const openTodos = grep.split("\n").map((l) => l.match(/^[^:]+:([^:]+):(\d+):(.*)$/)).filter(Boolean).slice(0, 20).map((m) => ({ file: m![1]!, line: parseInt(m![2]!, 10), text: m![3]!.trim().slice(0, 120) }));
@@ -1000,7 +1000,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
           card = ogCardSvg({ kicker: "COMMIT PERSONA", title: repoName, badge: top ? `${top.author} · ${top.tier}` : "personas", lines: ps.map((p) => `${p.tier} · ${p.archetype} — ${p.author}`), accent: "#a78bfa" });
         } else if (kind === "brief") {
           const commits = parseBriefCommits(handle.path, 5000);
-          const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8" }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
+          const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8", timeout: 60000 }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
           const b = repoBrief.buildRepoBrief(commits, { repo: repoName, repoCommits: parseInt(g(["rev-list", "--count", "HEAD"]), 10) || commits.length });
           card = ogCardSvg({ kicker: "REPO BRIEF · shared context", title: repoName, badge: `${b.reconciled.contributors} contributors · ${b.reconciled.authoredCommits} commits`, lines: [`Focus: ${b.themes.slice(0, 5).join(", ")}`, ...b.team.slice(0, 4).map((t) => `${t.tier} · ${t.archetype} — ${t.author}`)], accent: "#22d3ee" });
         } else {
@@ -1008,7 +1008,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
           const ref = (url.searchParams.get("file") || url.searchParams.get("ref") || "HEAD").trim();
           const past = commits.map((c) => ({ hash: c.hash, author: c.author, ts: c.ts, subject: c.subject, body: c.body, files: c.files }));
           const fileArg = (url.searchParams.get("file") || "").trim();
-          const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8" }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
+          const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8", timeout: 60000 }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
           const hash = fileArg ? g(["log", "-1", "--format=%H", "--", fileArg]) : g(["rev-parse", url.searchParams.get("ref") || "HEAD"]);
           const pk = seance.reconstructSeance(past, hash, { ref, focusFile: fileArg || undefined, now: Math.floor(Date.now() / 1000) });
           card = ogCardSvg({ kicker: "SÉANCE · grounded context", title: pk.focus ? `Why: ${pk.focus}` : repoName, badge: `${pk.citations.length} cited · ${pk.at.monthsAgo}mo ago`, lines: [pk.decision.subject, ...pk.lineage.slice(0, 4).map((l) => l.subject)], accent: "#a78bfa" });
@@ -1030,7 +1030,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       let handle: { path: string; dispose: () => void } | null = null;
       try {
         handle = shallowClone(gitUrl);
-        const g = (args: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...args], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
+        const g = (args: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...args], { encoding: "utf8", timeout: 60000, maxBuffer: 128 * 1024 * 1024 }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
         // parse commits WITH hash + files (seance needs the hash to cite)
         const US = "\x1f", RS = "\x1e";
         const meta = g(["log", "--no-merges", "-n", "5000", `--format=${RS}%H${US}%an${US}%at${US}%s${US}%b`]);
@@ -1067,7 +1067,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
       try {
         handle = shallowClone(gitUrl);                           // blob:none = FULL history (needed for personas)
         // EXACT git reconciliation — so the numbers match what GitHub/GitLab shows.
-        const countOf = (args: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, "rev-list", "--count", ...args, "HEAD"], { encoding: "utf8" }); return r.status === 0 ? parseInt((r.stdout || "0").trim(), 10) || 0 : 0; };
+        const countOf = (args: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, "rev-list", "--count", ...args, "HEAD"], { encoding: "utf8", timeout: 60000 }); return r.status === 0 ? parseInt((r.stdout || "0").trim(), 10) || 0 : 0; };
         const repoCommits = countOf([]);                         // ALL commits incl merges = GitHub/GitLab's number
         const nonMergeCommits = countOf(["--no-merges"]);        // what authorship analysis uses
         const merges = Math.max(0, repoCommits - nonMergeCommits);
@@ -1191,7 +1191,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
           svg = pillBadgeSvg("🎭 commit persona", top ? `${top.tier} · ${ps.length} heroes` : "no personas", tc);
         } else {
           const commits = parseBriefCommits(handle.path, 5000);
-          const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8" }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
+          const g = (a: string[]) => { const r = gitSpawn("git", ["-C", handle!.path, ...a], { encoding: "utf8", timeout: 60000 }); return r.status === 0 ? (r.stdout || "").trim() : ""; };
           const b = repoBrief.buildRepoBrief(commits, { repo: gitUrl, repoCommits: parseInt(g(["rev-list", "--count", "HEAD"]), 10) || commits.length });
           svg = pillBadgeSvg("🧭 repo brief", `${b.reconciled.contributors} devs · ${b.reconciled.authoredCommits} commits`, "#22d3ee");
         }
@@ -1377,7 +1377,7 @@ export function createXRayServer(monitor?: CosmicMonitor, injectedHub?: TrackerH
         let temporal: { topHotspots: Array<{ file: string; churn: number; couplingEdges: number; band: string }>; hiddenDeps: Array<{ a: string; b: string; coChanges: number }>; hiddenCount: number } | null = null;
         try {
           const SCAN = /\.(ts|tsx|js|jsx|mjs|cjs|py|go|rs|rb|java|kt|cs|php|proto|yaml|yml|prisma|sql)$/i;
-          const lg = gitSpawn("git", ["-C", handle.path, "log", "--no-merges", "--format=%x1e", "--name-only", "-n", "400"], { encoding: "utf8", maxBuffer: 128 * 1024 * 1024 });
+          const lg = gitSpawn("git", ["-C", handle.path, "log", "--no-merges", "--format=%x1e", "--name-only", "-n", "400"], { encoding: "utf8", timeout: 60000, maxBuffer: 128 * 1024 * 1024 });
           if (lg.status === 0 && lg.stdout) {
             const blocks = lg.stdout.split("\x1e");
             const churn: Record<string, number> = {};

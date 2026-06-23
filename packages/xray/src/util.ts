@@ -3,11 +3,14 @@ import { spawnSync } from "node:child_process";
 import { readFileSync, statSync, readdirSync } from "node:fs";
 import { join, extname, basename, relative, sep } from "node:path";
 
-/** Run git read-only; returns stdout or "" on any failure (never throws). */
-export function git(repoPath: string, args: string[]): string {
+/** Run git read-only; returns stdout or "" on any failure (never throws).
+ *  v3.148: a hard timeout (default 45s) so a huge/slow repo degrades GRACEFULLY to ""
+ *  instead of hanging the request forever (the cause of empty badges on large repos).
+ *  A timeout makes spawnSync set .error/.signal → status !== 0 → "" (honest partial). */
+export function git(repoPath: string, args: string[], timeoutMs = 45_000): string {
   try {
-    const r = spawnSync("git", args, { cwd: repoPath, encoding: "utf8", maxBuffer: 64 * 1024 * 1024 });
-    if (r.status !== 0) return "";
+    const r = spawnSync("git", args, { cwd: repoPath, encoding: "utf8", maxBuffer: 96 * 1024 * 1024, timeout: timeoutMs });
+    if (r.status !== 0 || r.error) return "";
     return r.stdout ?? "";
   } catch {
     return "";

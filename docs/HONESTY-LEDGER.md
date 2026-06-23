@@ -3,19 +3,19 @@
 > Auto-generated + Ed25519-signed. Verify offline: `mneme honesty verify` (paste the JSON).
 > This attests every **public claim currently passes its probe** — not that the software is bug-free.
 
-**mneme@3.147.0** · generated 2026-06-23T08:53:24.629Z
+**mneme@3.148.0** · generated 2026-06-23T09:13:11.828Z
 
 | | count |
 |--|--|
-| ✅ pass | 137 |
+| ✅ pass | 138 |
 | 🟠 drift | 0 |
 | 🔴 refuted | 0 |
 | ⚪ unmeasured | 0 |
 | **score** | **100/100** · 🟢 ZERO-DRIFT |
 
-Signed: `9de66ee802256bee` · receipt `03d3cc38c90182f8…`
+Signed: `9de66ee802256bee` · receipt `f51006ddeccbd187…`
 
-<details><summary>All 137 claims</summary>
+<details><summary>All 138 claims</summary>
 
 | claim | verdict | probe |
 |--|--|--|
@@ -152,6 +152,7 @@ Signed: `9de66ee802256bee` · receipt `03d3cc38c90182f8…`
 | `claim.bequest.inheritance_math_sound` | ✅ pass | `probe.bequest.inheritance_math_sound` |
 | `claim.exec.roi_math_sound` | ✅ pass | `probe.exec.roi_math_sound` |
 | `claim.egress.sovereign_guard` | ✅ pass | `probe.egress.sovereign_guard` |
+| `claim.compare.beats_baseline` | ✅ pass | `probe.compare.beats_baseline` |
 | `claim.posture.grades_and_signs` | ✅ pass | `probe.posture.grades_and_signs` |
 | `claim.escalon.finds_tool_chain_vulns` | ✅ pass | `probe.escalon.finds_tool_chain_vulns` |
 | `claim.mutagen.finds_guardrail_holes` | ✅ pass | `probe.mutagen.finds_guardrail_holes` |

@@ -1353,6 +1353,15 @@ export const CLAIM_CATALOG: ReadonlyArray<Claim> = [
     severity: "block",
   },
   {
+    id: "claim.compare.beats_baseline",
+    source: "v3.148.0 release notes — COMPARE",
+    text: "Mneme's approach measurably beats a typical BASELINE approach on every security axis, computed live from the real engines (not a named competitor — a faithful model of the common approach, since Mneme can't run a third party's private engine): obfuscated-attack defense (normalize-first catches ~100% of live attack variants vs a keyword filter's ~24%), tool-chain privilege-escalation detection (composition analysis finds the composed RCE a single-tool review misses, 100 vs 0), and marketing-claim verifiability (100% probe-bound + signed vs unverifiable prose). MEASURED (compareGauntlet=100): Mneme wins all axes, average delta ≈ +92. ★HONEST (DIAKRISIS): the deltas are real + reproducible; 'baseline' is the common approach, NOT a named product",
+    kind: "boolean",
+    asserted: { value: 1, op: "=", unit: "boolean" },
+    probeId: "probe.compare.beats_baseline",
+    severity: "block",
+  },
+  {
     id: "claim.posture.grades_and_signs",
     source: "v3.147.0 release notes — POSTURE",
     text: "POSTURE is the signed Agent Security Posture report — the capstone composing the agent-security engines. It grades an AI agent's whole safety surface in one certificate: the INPUT layer (MUTAGEN derives novel attack variants, measures how many breach the agent's guardrail) + the TOOL layer (ESCALON traces tool-chain privilege-escalation paths + screens descriptions for poisoning) → a 0..100 score + A–F grade + ranked findings, Ed25519-signed + offline-verifiable (the grade RE-DERIVES from the score — a cooked grade is rejected). MEASURED (postureGauntlet=100): a hardened agent grades A (≥90), a vulnerable one grades F (<55), the vulnerable report reflects BOTH an input breach AND a tool escalation + poisoning, the signed cert verifies offline + tamper is caught. ★HONEST (DIAKRISIS): grades the DECLARED config against a KNOWN attack/escalation space — a posture assessment, NOT a live pentest or proof of safety",

@@ -982,6 +982,7 @@ export * as honestyLedger from "./honesty_ledger/index.js";
 export * as mutagen from "./mutagen/index.js";
 export * as escalon from "./escalon/index.js";
 export * as posture from "./posture/index.js";
+export * as compare from "./compare/index.js";
 export * as flightRecorder from "./flight_recorder/index.js";
 export * as honestyScore from "./honesty_score/index.js";
 export * as truthStake from "./truth_stake/index.js";

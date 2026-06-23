@@ -2,20 +2,20 @@
   "v": 1,
   "alg": "ed25519",
   "kind": "generic",
-  "subject": "mneme-honesty-ledger@3.147.0",
-  "payloadHash": "9f9893fd2cf0c883a22a0ac11b4bbc6cfaac16ed93096321c25d1a4d549b7b32",
+  "subject": "mneme-honesty-ledger@3.148.0",
+  "payloadHash": "733acaf3a40740d65f232b315537aef1588740cef81ec9509b11cdeeb284caf3",
   "payload": {
     "spec": "MNEME-HONESTY-LEDGER",
     "v": 1,
-    "version": "3.147.0",
-    "generatedAt": "2026-06-23T08:53:24.629Z",
+    "version": "3.148.0",
+    "generatedAt": "2026-06-23T09:13:11.828Z",
     "summary": {
-      "total": 137,
-      "pass": 137,
+      "total": 138,
+      "pass": 138,
       "drift": 0,
       "refuted": 0,
       "unmeasured": 0,
-      "measured": 137,
+      "measured": 138,
       "score": 100,
       "honest": true
     },
@@ -360,7 +360,7 @@
         "probeId": "probe.stderr.session_bytes",
         "severity": "warn",
         "verdict": "pass",
-        "reason": "asserted >= 200 bytes; measured 523"
+        "reason": "asserted >= 200 bytes; measured 522"
       },
       {
         "id": "claim.tool_count.at_least_800",
@@ -1218,6 +1218,15 @@
         "reason": "asserted = 1 boolean; measured 1"
       },
       {
+        "id": "claim.compare.beats_baseline",
+        "text": "Mneme's approach measurably beats a typical BASELINE approach on every security axis, computed live from the real engines (not a named competitor — a faithful model of the common approach, since Mneme can't run a third party's private engin",
+        "source": "v3.148.0 release notes — COMPARE",
+        "probeId": "probe.compare.beats_baseline",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted true; measured true"
+      },
+      {
         "id": "claim.posture.grades_and_signs",
         "text": "POSTURE is the signed Agent Security Posture report — the capstone composing the agent-security engines. It grades an AI agent's whole safety surface in one certificate: the INPUT layer (MUTAGEN derives novel attack variants, measures how m",
         "source": "v3.147.0 release notes — POSTURE",
@@ -1257,8 +1266,8 @@
   },
   "issuer": "MCowBQYDK2VwAyEAE8LE7MxyTrZatGLYHP0O4Kj4OoOzKHsRmLJBScBuPmM=",
   "issuerFingerprint": "9de66ee802256bee",
-  "issuedAt": 1782204814326,
+  "issuedAt": 1782206001403,
   "prev": null,
-  "receiptId": "03d3cc38c90182f86af6dc2541a24fb46f1ba7a09d3f106b7529152ecf7a7f83",
-  "sig": "dyuRI/Rb2Ehj/lKDXREuKfuqYoxxS2cQCfoB0NM2HwATy+0nHVogbuPlKZmfrFds8eXCyH0j0XEQ7BdFSf+5Aw=="
+  "receiptId": "f51006ddeccbd187417cbafd2c7c557fb176bff6993e4eb7ae5f5f5d4139fed1",
+  "sig": "wn14kFRNotKm1+ueLkK0KjnoU2jJ1F99+KVFAGByLKIpha9JplOB1cs/7Hf4MlyIKiPncxURd4G+tsQR+KSbAQ=="
 }
