@@ -1,97 +1,112 @@
-# Launch copy — honest, no hype (review before posting)
+# 🚀 Launch kit — ready to paste (honest, VERICERT-passed, no hype)
 
-> Ground rule: lead with the one verifiable thing a reader can try in 10s. State the
-> caveats. No "world-first", no fabricated numbers. Let the demo speak.
+> Every claim below passed `mneme launch` (VERICERT) — defensible, no overclaim, no
+> fabricated number. Lead with the one thing a reader can try in 10 seconds.
+> **Replace `<MARKETPLACE_URL>`** with the exact URL on your listing page
+> (likely `https://github.com/marketplace/actions/mneme-pr-context-checks`).
 
 ---
 
-## Hacker News — Show HN
+## ① Hacker News — Show HN  (news.ycombinator.com/submit)
 
-**Title:**
-`Show HN: Mneme – git-native context + checks on every PR (deterministic, local, no LLM in the analysis)`
-
-**Body:**
+**Title** (≤80 chars):
 ```
-I kept watching AI agents (and humans) edit code with zero context about *why* a file
-is the way it is, and ship PR descriptions that quietly overclaim. So I built Mneme.
+Show HN: Mneme – git-native context and checks on every PR, no LLM in the analysis
+```
+**URL:** `https://github.com/patsa2561-art/mneme-ai`
 
-On every PR it posts one comment, all derived deterministically from git — no LLM in
-the analysis path, nothing leaves your CI runner:
+**Text:**
+```
+I kept watching reviewers approve PRs they didn't fully understand — and AI agents
+edit code with no idea *why* a file is the way it is. So I built Mneme.
 
+On every pull request it posts one comment, all derived deterministically from git
+(no LLM in the analysis path, nothing leaves your CI runner):
+
+• why each changed file is the way it is — its last decision + how often it changes,
+  cited to real commits
 • a check of the PR *description* for overconfident / self-contradicting / fabricated
-  claims (a small rule engine, not a model)
-• for each changed file: its last decision + how often it changes, cited to real commits
-  ("why is this file the way it is?")
-• the author's "commit persona" from measured signals (commit size, tests, conventional
-  rate, fix-rate) — explicitly commit *hygiene*, not skill
+  claims (a rule engine, not a model)
+• the author's "commit persona" from measured signals — explicitly commit *hygiene*,
+  not skill
 
-Try it with no install — paste any public repo:
-• https://xray.mneme-ai.space/brief   (the repo's shared-context capsule)
-• https://xray.mneme-ai.space/seance  (why is a file / commit the way it is)
-• https://xray.mneme-ai.space/persona (each contributor's commit style)
+Try the web tools free, no install — paste any public repo:
+• https://xray.mneme-ai.space/brief    (the repo's shared-context capsule)
+• https://xray.mneme-ai.space/seance   (why is a file / commit the way it is)
+• https://xray.mneme-ai.space/persona  (each contributor's commit style)
 
-It's MIT, local-first, vendor-neutral (MCP + a CLI). Honest about limits: it measures
-git hygiene and surfaces context — it does NOT judge skill, and "no known fault" is not
-a proof of correctness. Source is cloned, scanned, and deleted; private repos run locally.
+Add the PR bot to a repo in one line: uses: patsa2561-art/mneme-ai@v3
+(GitHub Marketplace: <MARKETPLACE_URL>)
 
-I'd love feedback on the PR-comment format and what context you wish your tools surfaced.
+It's MIT, local-first, vendor-neutral (an MCP server + a CLI). Honest about limits:
+it surfaces context and checks known issues — it does NOT judge skill, and "no known
+fault" is not a proof of correctness. Source is cloned, scanned, and deleted; private
+repos run locally.
+
+Feedback very welcome — especially on the PR-comment format and what context you wish
+your tools surfaced.
 ```
 
 ---
 
-## X / Twitter — thread
+## ② X / Twitter — thread
 
-1/ Every AI agent edits your code with no idea *why* the file is the way it is — and
-happily ships a PR description that overclaims. I built Mneme to fix both, deterministically
-from git. No LLM in the analysis. Nothing leaves your CI. 🧵
+```
+1/ Reviewers approve PRs they don't fully understand — and AI agents edit code with no
+idea *why* a file is the way it is. I built Mneme to fix both, deterministically from
+git. No LLM in the analysis. Nothing leaves your CI. 🧵
 
 2/ On every PR, one comment:
-🧭 VERICERT the description (catch overconfident/contradicting/fabricated claims)
-📂 each changed file's last decision + churn, *cited to real commits*
+🧭 why each changed file is the way it is (cited to real commits)
+🎗️ a fact-check of the PR description (overconfident/contradicting/fabricated)
 🎭 the author's commit persona (hygiene, not skill)
 
 3/ Try it free, no install — paste any public repo:
 • /brief — the repo's shared-context capsule
 • /seance — "why is this file the way it is?"
-• /persona — each dev's commit style as a card
-→ xray.mneme-ai.space
+• /persona — each dev's commit style
+→ https://xray.mneme-ai.space
 
-4/ It's MIT · local-first · vendor-neutral (MCP + CLI). Honest: it measures git *hygiene*
-+ surfaces context — not skill, not a proof of correctness. Code never leaves your runner.
+4/ Add the PR bot in one line: uses: patsa2561-art/mneme-ai@v3
+GitHub Marketplace → <MARKETPLACE_URL>
 
-5/ Add it to a repo in one file → `uses: patsa2561-art/mneme-ai@v3`. Feedback very welcome.
+5/ MIT · local-first · vendor-neutral (MCP + CLI). Honest: it surfaces context + checks
+known issues — not skill, not a proof of correctness. Code never leaves your runner.
+Feedback very welcome.
+```
 
 ---
 
-## Reddit — r/programming or r/devtools
+## ③ Reddit — r/programming or r/devtools
 
-**Title:** `I built a deterministic PR bot: git-native context + a check on the PR description (MIT, no LLM in the analysis)`
-
+**Title:**
+```
+I built a deterministic PR bot: git-native context + a check on the PR description (MIT, no LLM in the analysis)
+```
 **Body:**
 ```
 Two things bug me about how we (and our AI agents) work: we edit files without knowing
 why they're the way they are, and PR descriptions quietly overclaim.
 
-Mneme posts one comment per PR, all from git, deterministically (no model in the analysis
-path, nothing leaves CI):
-- checks the PR *description* for overconfident / self-contradicting / fabricated claims
-- per changed file: last decision + churn, cited to real commits
+Mneme posts one comment per PR, all from git, deterministically (no model in the
+analysis path, nothing leaves CI):
+- why each changed file is the way it is — last decision + churn, cited to real commits
+- a check of the PR *description* for overconfident / contradicting / fabricated claims
 - the author's "commit persona" (commit size / tests / conventional rate / fix-rate) —
   hygiene, not skill
 
-No install to try — paste a public repo at xray.mneme-ai.space (/brief, /seance, /persona).
-MIT, local-first, MCP + CLI. Honest about limits (hygiene ≠ skill; "no known fault" ≠ proof).
-Curious what context you'd want surfaced on a PR.
+No install to try — paste a public repo at https://xray.mneme-ai.space (/brief,
+/seance, /persona). Add the bot in one line: uses: patsa2561-art/mneme-ai@v3
+(Marketplace: <MARKETPLACE_URL>).
+
+MIT, local-first, MCP + CLI. Honest about limits (hygiene ≠ skill; "no known fault" ≠
+proof). Curious what context you'd want surfaced on a PR.
 ```
 
 ---
 
-## Publishing the Marketplace action (you do this on GitHub)
-
-1. `action.yml` is at the repo root (composite action) with `branding`.
-2. GitHub → the repo → **Releases → Draft a new release** → pick the tag (e.g. `v3.133.0`).
-3. Tick **"Publish this Action to the GitHub Marketplace"**, pick a category (Continuous
-   Integration / Code review), accept the agreement, **Publish**.
-4. Users then add `uses: patsa2561-art/mneme-ai@v3` to their workflow.
-
-(Marketplace publish is a one-time UI step only the repo owner can do.)
+## What I (the author) do — the manual steps
+1. Confirm the exact Marketplace URL on the listing page; paste it where `<MARKETPLACE_URL>` is.
+2. Post the HN "Show HN" (best Tue–Thu morning US time), then the X thread, then Reddit.
+3. Reply to early comments fast — that's what moves a Show HN.
+4. (Optional) move the `v3` tag on each future release so `@v3` users get the latest.
