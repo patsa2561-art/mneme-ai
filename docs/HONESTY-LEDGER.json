@@ -2,20 +2,20 @@
   "v": 1,
   "alg": "ed25519",
   "kind": "generic",
-  "subject": "mneme-honesty-ledger@3.152.0",
-  "payloadHash": "dee67793d92c721a7ada8dc65b041109dbf2150961a21eb9d5fbfa6f475fbafe",
+  "subject": "mneme-honesty-ledger@3.153.0",
+  "payloadHash": "7d868e34439894f23ace4c668bf0f19b1c17955aa3d640278ff32d04c400077b",
   "payload": {
     "spec": "MNEME-HONESTY-LEDGER",
     "v": 1,
-    "version": "3.152.0",
-    "generatedAt": "2026-06-23T10:55:30.454Z",
+    "version": "3.153.0",
+    "generatedAt": "2026-06-25T05:41:07.905Z",
     "summary": {
-      "total": 138,
-      "pass": 138,
+      "total": 139,
+      "pass": 139,
       "drift": 0,
       "refuted": 0,
       "unmeasured": 0,
-      "measured": 138,
+      "measured": 139,
       "score": 100,
       "honest": true
     },
@@ -288,7 +288,7 @@
         "probeId": "probe.capabilities.bytes",
         "severity": "block",
         "verdict": "pass",
-        "reason": "asserted < 25000 bytes; measured 4136"
+        "reason": "asserted < 25000 bytes; measured 3935"
       },
       {
         "id": "claim.tokens.capabilities_tokens_lt_8k",
@@ -333,7 +333,7 @@
         "probeId": "probe.embedder.tier",
         "severity": "block",
         "verdict": "pass",
-        "reason": "live = ollama:nomic-embed-text"
+        "reason": "live = bundled:Xenova/all-MiniLM-L6-v2"
       },
       {
         "id": "claim.audit_log.opt_in",
@@ -369,7 +369,7 @@
         "probeId": "probe.tool_count",
         "severity": "info",
         "verdict": "pass",
-        "reason": "asserted >= 800 tools; measured 1135"
+        "reason": "asserted >= 800 tools; measured 1137"
       },
       {
         "id": "claim.rewind.card_count_known",
@@ -1218,6 +1218,15 @@
         "reason": "asserted = 1 boolean; measured 1"
       },
       {
+        "id": "claim.agora.referees_ai_commerce",
+        "text": "AGORA is the trust referee for AI-agent commerce. When an AI shops for a user (ChatGPT×Shopee-style), the merchant writes the content the agent trusts — so AGORA screens each product LISTING for: ① INJECTION that steers the agent ('ignore o",
+        "source": "v3.153.0 release notes — AGORA",
+        "probeId": "probe.agora.referees_ai_commerce",
+        "severity": "block",
+        "verdict": "pass",
+        "reason": "asserted true; measured true"
+      },
+      {
         "id": "claim.compare.beats_baseline",
         "text": "Mneme's approach measurably beats a typical BASELINE approach on every security axis, computed live from the real engines (not a named competitor — a faithful model of the common approach, since Mneme can't run a third party's private engin",
         "source": "v3.148.0 release notes — COMPARE",
@@ -1266,8 +1275,8 @@
   },
   "issuer": "MCowBQYDK2VwAyEAE8LE7MxyTrZatGLYHP0O4Kj4OoOzKHsRmLJBScBuPmM=",
   "issuerFingerprint": "9de66ee802256bee",
-  "issuedAt": 1782212137601,
+  "issuedAt": 1782366075144,
   "prev": null,
-  "receiptId": "6beccc751ee178ab1c1dbd2b4534311dc5e5339522ae2415b065f5f618747714",
-  "sig": "lMexKYkwf/uApnKeKrkhFuhvSldD0YR1EKaXx3SAP3TSlD+Qbt5zIytf3gwimpzh5z+MBMGmtoXSRMTq92zUDQ=="
+  "receiptId": "76dcfdcfeb3a0af25f0bcd5b1afff0ac509ad7b96600759330a8ad93f5a70ebf",
+  "sig": "ow8O2kQv5XDrODRvFuu4vCEorxahkfK1BQFsECVV/Nj/l2PfBaBlV5UvPL4kHcgCEwD+qp8JF62XpbW5yr/tCA=="
 }

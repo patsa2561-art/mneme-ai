@@ -3796,6 +3796,21 @@ const probes: Probe[] = [
       }
     },
   },
+  // ── v3.153.0 — AGORA trust referee for AI-commerce (deterministic) ──────
+  {
+    id: "probe.agora.referees_ai_commerce",
+    kind: "boolean",
+    description: "1 when AGORA works: catches a listing that injects the shopping agent (→ MANIPULATED), spares an honest listing, catches fake-review + new-seller-spike anomalies, flags unverifiable specs (EN+Thai), catches hidden obfuscated directives, and re-ranks results by trust. Pure logic.",
+    run: async () => {
+      try {
+        const { agoraGauntlet } = await import("../agora/index.js" as string) as typeof import("../agora/index.js");
+        const g = agoraGauntlet();
+        return { value: g.score === 100 ? 1 : 0, evidence: g.score === 100 ? "detects agent-injection + fake-signal anomalies + unverifiable claims, re-ranks by trust" : `agora gauntlet ${g.score}`, detail: g as unknown as Record<string, unknown> };
+      } catch (e) {
+        return { value: null, evidence: `probe threw: ${(e as Error).message}` };
+      }
+    },
+  },
   // ── v3.148.0 — COMPARE head-to-head vs baseline (deterministic) ─────────
   {
     id: "probe.compare.beats_baseline",

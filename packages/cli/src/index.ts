@@ -192,6 +192,7 @@ import { registerMutagenCommands } from "./commands/mutagen.js";
 import { registerEscalonCommands } from "./commands/escalon.js";
 import { registerPostureCommands } from "./commands/posture.js";
 import { registerCompareCommands } from "./commands/compare.js";
+import { registerAgoraCommands } from "./commands/agora.js";
 import { registerMoatCommands } from "./commands/moat.js";
 import { attachRegretOracle } from "./commands/regret.js";
 import { registerTrustCommands } from "./commands/trust.js";
@@ -5056,6 +5057,7 @@ export async function run(argv: string[]): Promise<void> {
   registerEscalonCommands(program);
   registerPostureCommands(program);
   registerCompareCommands(program);
+  registerAgoraCommands(program);
   registerMoatCommands(program);
   // ─── Trust calibrator (v1.31.0) -- per-subsystem precision/recall/band
   registerTrustCommands(program);
