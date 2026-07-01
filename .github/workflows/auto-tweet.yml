@@ -55,7 +55,7 @@ jobs:
       X_CONSUMER_KEY: ${{ secrets.X_CONSUMER_KEY }}
     if: ${{ vars.SKIP_AUTOTWEET != 'true' }}
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v7
         with:
           fetch-depth: 1
 
